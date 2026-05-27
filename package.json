@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "relayer:dev":  "cd relayer && npm run dev",
+    "relayer:once": "cd relayer && npm run once"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.2.4",

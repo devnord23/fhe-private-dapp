@@ -1,0 +1,24 @@
+{
+  "name": "confidentialfi-relayer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MVP relayer: bridges BaseVault (Base Sepolia) ↔ ConfidentialStrategyAgent (Zama fhEVM)",
+  "type": "module",
+  "scripts": {
+    "dev":        "tsx watch src/index.ts",
+    "once":       "tsx src/once.ts",
+    "build":      "tsc --noEmit",
+    "test":       "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "viem":   "^2.23.10"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx":         "^4.19.2",
+    "typescript":  "^5.5.4",
+    "vitest":      "^1.6.0"
+  }
+}
