@@ -40,9 +40,10 @@ export function ConnectButton() {
                   className="hidden sm:flex items-center gap-1.5 rounded-xl bg-surface-600 border border-surface-400/50 px-3 py-2 text-xs text-gray-300 hover:bg-surface-500 transition-colors"
                 >
                   {chain.hasIcon && chain.iconUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={chain.iconUrl}
-                      alt={chain.name}
+                      alt={chain.name ?? "chain"}
                       className="w-4 h-4 rounded-full"
                     />
                   )}

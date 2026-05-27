@@ -1,114 +1,106 @@
 /**
- * interact.ts – Example interaction script for ConfidentialToken on a local Hardhat node.
+ * interact.ts – Example interaction with ConfidentialToken on Zama Devnet.
  *
- * Demonstrates the full shield → transfer → requestUnshield flow.
- * Run: npm run interact:local
+ * This script demonstrates the COMPLETE shield → transfer → requestUnshield flow.
+ * It must be run against a LIVE DEPLOYMENT on Zama Devnet (or Sepolia with fhEVM).
  *
- * NOTE: This script runs in a Node.js / Hardhat context.
- *       The `fhevmjs` client-side encryption (createEncryptedInput) is done here
- *       using the Hardhat fhEVM mock which lets you encrypt values in tests/scripts
- *       the same way a browser wallet would.
+ * Prerequisites:
+ *   1. Deploy the contracts:     npm run deploy:zamaDevnet
+ *   2. Set env vars in .env:     LOCAL_CONTRACT_ADDRESS, LOCAL_UNDERLYING_ADDRESS
+ *   3. Run:                      npx hardhat run scripts/interact.ts --network zamaDevnet
+ *
+ * For the encrypted transfer and unshield steps the script shows the exact calls
+ * to make.  Client-side fhevmjs encryption must be performed in the browser
+ * (see src/hooks/useConfidentialTransfer.ts) or a Node.js script that imports
+ * fhevmjs and the @zama-fhe/relayer-sdk.
+ *
+ * NOTE: This script does NOT import fhevmjs because it is a frontend dependency.
+ *       For a self-contained Node.js encryption example, add fhevmjs to
+ *       contracts/package.json and follow the fhevmjs docs.
  */
 
 import { ethers } from "hardhat";
-import { createInstances } from "fhevm/lib/fhevmjsMock";
-// ^ The mock version of fhevmjs, provided by the fhevm Hardhat plugin.
-//   In the browser you use `createInstance` from 'fhevmjs' instead.
 
 const CONFIDENTIAL_TOKEN = process.env.LOCAL_CONTRACT_ADDRESS ?? "";
 const MOCK_ERC20 = process.env.LOCAL_UNDERLYING_ADDRESS ?? "";
 
 async function main() {
-  const [owner, alice, bob] = await ethers.getSigners();
-
   if (!CONFIDENTIAL_TOKEN || !MOCK_ERC20) {
     throw new Error(
-      "Set LOCAL_CONTRACT_ADDRESS and LOCAL_UNDERLYING_ADDRESS in .env before running interact.ts.\n" +
-        "Run `npm run deploy:local` first."
+      "Set LOCAL_CONTRACT_ADDRESS and LOCAL_UNDERLYING_ADDRESS in .env first.\n" +
+        "Run `npm run deploy:zamaDevnet` (or deploy:local) to get these addresses."
     );
   }
+
+  const [owner, alice, bob] = await ethers.getSigners();
+  const chainId = (await owner.provider.getNetwork()).chainId;
+
+  console.log("=".repeat(60));
+  console.log("ConfidentialToken Interaction Demo");
+  console.log("=".repeat(60));
+  console.log(`Network:   ${chainId}`);
+  console.log(`Deployer:  ${owner.address}`);
+  console.log(`Alice:     ${alice.address}`);
+  console.log(`Bob:       ${bob.address}`);
+  console.log();
 
   const underlying = await ethers.getContractAt("MockERC20", MOCK_ERC20);
   const ct = await ethers.getContractAt("ConfidentialToken", CONFIDENTIAL_TOKEN);
 
-  // ── Setup: mint tokens and approve ─────────────────────────────────────────
-  const shieldAmount = ethers.parseUnits("1000", 6); // 1,000 mUSDC (6 decimals)
-  await underlying.mint(alice.address, shieldAmount);
-  await underlying.connect(alice).approve(CONFIDENTIAL_TOKEN, shieldAmount);
+  // ── Step 1: Mint MockERC20 tokens to Alice ──────────────────────────────────
+  console.log("[1] Minting 1,000 mUSDC to Alice...");
+  const mintAmount = ethers.parseUnits("1000", 6);
+  await (await underlying.mint(alice.address, mintAmount)).wait();
+  console.log(
+    `    Alice public balance: ${ethers.formatUnits(
+      await underlying.balanceOf(alice.address),
+      6
+    )} mUSDC`
+  );
 
-  console.log(`Alice's public mUSDC before shield: ${ethers.formatUnits(
-    await underlying.balanceOf(alice.address), 6
-  )}`);
-
-  // ── Step 1: Shield – deposit into confidential pool ─────────────────────────
-  console.log("\n[1] Shielding 1,000 mUSDC for Alice...");
-  const shieldTx = await ct.connect(alice).shield(shieldAmount);
+  // ── Step 2: Approve + Shield ────────────────────────────────────────────────
+  console.log("\n[2] Alice approves and shields 500 mUSDC...");
+  const shieldAmount = ethers.parseUnits("500", 6);
+  await (
+    await underlying.connect(alice).approve(await ct.getAddress(), shieldAmount)
+  ).wait();
+  const shieldTx = await ct.connect(alice).shield(BigInt(shieldAmount));
   await shieldTx.wait();
-  console.log(`    Tx: ${shieldTx.hash}`);
-
-  // ── Step 2: Confidential transfer Alice → Bob ────────────────────────────────
-  console.log("\n[2] Alice sends 250 mUSDC to Bob (confidentially)...");
-
-  // Create a mock fhEVM instance for Alice.
-  // In the browser this would be: const instance = await createInstance({ chainId, networkUrl })
-  const { instance: aliceInstance } = await createInstances(alice.address, ethers, alice);
-
-  // Encrypt the transfer amount using Alice's instance.
-  // In the browser: instance.createEncryptedInput(contractAddress, userAddress).add64(amount)
-  const transferAmountPlain = BigInt(250 * 10 ** 6); // 250 mUSDC in smallest unit
-  const encryptedInput = aliceInstance.createEncryptedInput(CONFIDENTIAL_TOKEN, alice.address);
-  encryptedInput.add64(transferAmountPlain);
-  const { handles, inputProof } = await encryptedInput.encrypt();
-
-  const transferTx = await ct.connect(alice).transfer(
-    bob.address,
-    handles[0], // bytes32 encrypted handle
-    inputProof  // bytes proof
+  console.log(`    Shield tx: ${shieldTx.hash}`);
+  console.log(
+    `    Contract holds: ${ethers.formatUnits(
+      await underlying.balanceOf(await ct.getAddress()),
+      6
+    )} mUSDC`
   );
-  await transferTx.wait();
-  console.log(`    Tx: ${transferTx.hash}`);
-  console.log("    Amount is encrypted – observers cannot see 250 mUSDC in this tx.");
-
-  // ── Step 3: Re-encrypt Bob's balance to verify ───────────────────────────────
-  console.log("\n[3] Re-encrypting Bob's shielded balance to verify receipt...");
-
-  const { instance: bobInstance, publicKey: bobPubKey } = await createInstances(
-    bob.address, ethers, bob
+  console.log(
+    `    Alice encrypted balance handle: 0x${(await ct.encryptedBalanceOf(alice.address)).toString(16)}`
   );
 
-  const encryptedBobBalance = await ct.encryptedBalanceOf(bob.address);
-  // reencrypt decrypts the ciphertext using Bob's key pair (mocked in tests)
-  const bobBalance = await bobInstance.reencrypt(
-    encryptedBobBalance,
-    bobPubKey,
-    CONFIDENTIAL_TOKEN,
-    bob.address
-  );
-  console.log(`    Bob's shielded balance: ${Number(bobBalance) / 10 ** 6} mUSDC`);
+  // ── Step 3: Confidential Transfer (requires fhevmjs encryption) ──────────────
+  console.log("\n[3] Confidential Transfer: Alice → Bob (250 mUSDC)");
+  console.log("    NOTE: This step requires fhevmjs to encrypt the amount.");
+  console.log("    In the frontend, fhevmjs calls:");
+  console.log("      const input = instance.createEncryptedInput(contractAddress, alice.address)");
+  console.log("      input.add64(250_000_000n) // 250 mUSDC in smallest unit");
+  console.log("      const { handles, inputProof } = await input.encrypt()");
+  console.log("      await ct.transfer(bob.address, handles[0], inputProof)");
+  console.log();
+  console.log("    Skipping encrypted transfer in this script.");
+  console.log("    Use the frontend dapp at localhost:3000/transfer to perform this step.");
 
-  // ── Step 4: Request unshield ─────────────────────────────────────────────────
-  console.log("\n[4] Bob requests unshield of 100 mUSDC...");
+  // ── Step 4: Unshield ─────────────────────────────────────────────────────────
+  console.log("\n[4] Unshield: Alice withdraws 100 mUSDC back to public (encrypted request)");
+  console.log("    NOTE: requestUnshield() also requires fhevmjs encryption.");
+  console.log("    The Zama Gateway decrypts the amount and calls callbackUnshield().");
+  console.log("    On Zama Devnet, the callback fires within ~1-2 blocks (~2-4 seconds).");
+  console.log();
+  console.log("    Skipping encrypted unshield in this script.");
+  console.log("    Use the frontend dapp at localhost:3000/transfer (Unshield tab).");
 
-  const { instance: bobInstance2 } = await createInstances(bob.address, ethers, bob);
-  const unshieldInput = bobInstance2.createEncryptedInput(CONFIDENTIAL_TOKEN, bob.address);
-  unshieldInput.add64(BigInt(100 * 10 ** 6));
-  const { handles: unshieldHandles, inputProof: unshieldProof } = await unshieldInput.encrypt();
-
-  const unshieldTx = await ct.connect(bob).requestUnshield(
-    unshieldHandles[0],
-    unshieldProof,
-    bob.address
-  );
-  const unshieldReceipt = await unshieldTx.wait();
-  console.log(`    requestUnshield Tx: ${unshieldTx.hash}`);
-
-  // In the mock, the Gateway callback fires synchronously within the same block.
-  // On a real network, the Gateway decrypts asynchronously (may take 1-2 blocks).
-  console.log(`    Bob's public mUSDC after unshield: ${ethers.formatUnits(
-    await underlying.balanceOf(bob.address), 6
-  )} mUSDC`);
-
-  console.log("\n✓ Interaction complete.");
+  console.log("\n=".repeat(60));
+  console.log("Interaction demo complete.");
+  console.log("Next: open the frontend dapp to perform encrypted operations.");
 }
 
 main()

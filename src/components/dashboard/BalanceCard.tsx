@@ -102,7 +102,7 @@ export function BalanceCard() {
               </Tooltip>
               <p className="text-[10px] text-gray-600 mt-1.5 leading-relaxed">
                 To view your balance, fhevmjs must re-encrypt it to your local keypair.
-                A "Reveal Balance" button (wallet signature required) is planned.
+                A &ldquo;Reveal Balance&rdquo; button (wallet signature required) is planned.
               </p>
             </div>
           ) : (

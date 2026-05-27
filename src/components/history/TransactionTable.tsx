@@ -64,7 +64,7 @@ function AmountCell({ tx, address }: { tx: Transfer; address: string }) {
 export function TransactionTable() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
-  const { transfers, isLoading, stats } = useTransferHistory();
+  const { transfers, isLoading } = useTransferHistory();
 
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
