@@ -33,6 +33,13 @@ export const CONTRACT_ADDRESSES: Record<SupportedChainId, `0x${string}`> = {
     "0x0000000000000000000000000000000000000000") as `0x${string}`,
 };
 
+export const STRATEGY_AGENT_ADDRESSES: Record<SupportedChainId, `0x${string}`> = {
+  9000: (process.env.NEXT_PUBLIC_STRATEGY_AGENT_ADDRESS_ZAMA_DEVNET ||
+    "0x0000000000000000000000000000000000000000") as `0x${string}`,
+  11155111: (process.env.NEXT_PUBLIC_STRATEGY_AGENT_ADDRESS_SEPOLIA ||
+    "0x0000000000000000000000000000000000000000") as `0x${string}`,
+};
+
 // ── fhEVM RPC endpoints ──────────────────────────────────────────────────────
 
 export const FHEVM_RPC_URLS: Record<SupportedChainId, string> = {
@@ -231,3 +238,208 @@ export const TOKEN_DECIMALS = 6;
 
 export const POLLING_INTERVAL = 4_000;
 export const TX_CONFIRMATION_BLOCKS = 2;
+
+// ── ConfidentialStrategyAgent ABI ────────────────────────────────────────────
+//
+// Matches contracts/contracts/ConfidentialStrategyAgent.sol exactly.
+//
+// einput  → bytes32  in standard ABI (fhevmjs handle)
+// euint64 → uint256  in standard ABI (encrypted handle, read-only)
+
+export const STRATEGY_AGENT_ABI = [
+  // ── Constants ─────────────────────────────────────────────────────────────
+  { type: "function", name: "PARAM_APY_TARGET",          stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
+  { type: "function", name: "PARAM_REBALANCE_THRESHOLD", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
+  { type: "function", name: "PARAM_STOP_LOSS_BUFFER",    stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
+  { type: "function", name: "PARAM_LIQUIDATION_BUFFER",  stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
+  { type: "function", name: "PARAM_MAX_LEVERAGE",        stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
+  { type: "function", name: "PARAM_EVAL_COUNT",          stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
+
+  // ── Read ──────────────────────────────────────────────────────────────────
+  {
+    type: "function", name: "protocolOwner",
+    stateMutability: "view", inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function", name: "nextStrategyId",
+    stateMutability: "view", inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function", name: "authorizedAgents",
+    stateMutability: "view",
+    inputs: [{ name: "agent", type: "address" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function", name: "getOwnerStrategies",
+    stateMutability: "view",
+    inputs: [{ name: "owner", type: "address" }],
+    outputs: [{ name: "", type: "uint256[]" }],
+  },
+  {
+    type: "function", name: "getStrategyMetadata",
+    stateMutability: "view",
+    inputs: [{ name: "strategyId", type: "uint256" }],
+    outputs: [
+      { name: "owner",                    type: "address" },
+      { name: "isActive",                 type: "bool"    },
+      { name: "createdAt",                type: "uint256" },
+      { name: "lastEvaluatedAt",          type: "uint256" },
+      { name: "apyTargetHandle",          type: "uint256" }, // euint64 handle
+      { name: "rebalanceThresholdHandle", type: "uint256" },
+      { name: "stopLossBufferHandle",     type: "uint256" },
+      { name: "liquidationBufferHandle",  type: "uint256" },
+      { name: "maxLeverageHandle",        type: "uint256" },
+      { name: "evaluationCountHandle",    type: "uint256" },
+    ],
+  },
+  {
+    type: "function", name: "pendingReveals",
+    stateMutability: "view",
+    inputs: [{ name: "requestId", type: "uint256" }],
+    outputs: [
+      { name: "strategyId", type: "uint256" },
+      { name: "requester",  type: "address" },
+      { name: "paramType",  type: "uint8"   },
+    ],
+  },
+
+  // ── Write: Authorization ──────────────────────────────────────────────────
+  {
+    type: "function", name: "authorizeAgent",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "agent",  type: "address" },
+      { name: "status", type: "bool"    },
+    ],
+    outputs: [],
+  },
+
+  // ── Write: Strategy Lifecycle ─────────────────────────────────────────────
+  //
+  // All einput parameters are bytes32 in the ABI (fhevmjs handles).
+  // inputProof covers ALL five handles (single batch proof from fhevmjs).
+  {
+    type: "function", name: "createStrategy",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "encApyTarget",           type: "bytes32" },
+      { name: "encRebalanceThreshold",  type: "bytes32" },
+      { name: "encStopLossBuffer",      type: "bytes32" },
+      { name: "encLiquidationBuffer",   type: "bytes32" },
+      { name: "encMaxLeverage",         type: "bytes32" },
+      { name: "inputProof",             type: "bytes"   },
+    ],
+    outputs: [{ name: "strategyId", type: "uint256" }],
+  },
+  {
+    type: "function", name: "updateStrategy",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "strategyId",             type: "uint256" },
+      { name: "encApyTarget",           type: "bytes32" },
+      { name: "encRebalanceThreshold",  type: "bytes32" },
+      { name: "encStopLossBuffer",      type: "bytes32" },
+      { name: "encLiquidationBuffer",   type: "bytes32" },
+      { name: "encMaxLeverage",         type: "bytes32" },
+      { name: "inputProof",             type: "bytes"   },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function", name: "deactivateStrategy",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "strategyId", type: "uint256" }],
+    outputs: [],
+  },
+
+  // ── Write: Evaluation ─────────────────────────────────────────────────────
+  //
+  // Agent encrypts current market values (same fhevmjs pattern).
+  // inputProof covers BOTH encCurrentApy and encCurrentHealth.
+  {
+    type: "function", name: "evaluateStrategy",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "strategyId",     type: "uint256" },
+      { name: "encCurrentApy",  type: "bytes32" }, // einput
+      { name: "encCurrentHealth", type: "bytes32" }, // einput
+      { name: "inputProof",     type: "bytes"   },
+    ],
+    outputs: [],
+  },
+
+  // ── Write: Reveal ─────────────────────────────────────────────────────────
+  {
+    type: "function", name: "requestParameterReveal",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "strategyId", type: "uint256" },
+      { name: "paramType",  type: "uint8"   },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function", name: "requestEvaluationReveal",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "strategyId", type: "uint256" }],
+    outputs: [],
+  },
+
+  // ── Events ────────────────────────────────────────────────────────────────
+  {
+    type: "event", name: "StrategyCreated",
+    inputs: [
+      { name: "strategyId", type: "uint256", indexed: true },
+      { name: "owner",      type: "address", indexed: true },
+    ],
+  },
+  {
+    type: "event", name: "StrategyUpdated",
+    inputs: [{ name: "strategyId", type: "uint256", indexed: true }],
+  },
+  {
+    type: "event", name: "StrategyDeactivated",
+    inputs: [{ name: "strategyId", type: "uint256", indexed: true }],
+  },
+  {
+    type: "event", name: "EvaluationPerformed",
+    inputs: [
+      { name: "strategyId", type: "uint256", indexed: true  },
+      { name: "blockNumber", type: "uint256", indexed: true },
+    ],
+  },
+  {
+    type: "event", name: "RevealRequested",
+    inputs: [
+      { name: "strategyId", type: "uint256", indexed: true  },
+      { name: "paramType",  type: "uint8",   indexed: false },
+      { name: "requestId",  type: "uint256", indexed: true  },
+    ],
+  },
+  {
+    type: "event", name: "ParameterRevealed",
+    inputs: [
+      { name: "strategyId",    type: "uint256", indexed: true  },
+      { name: "paramType",     type: "uint8",   indexed: false },
+      { name: "revealedValue", type: "uint64",  indexed: false },
+    ],
+  },
+  {
+    type: "event", name: "EvaluationRevealed",
+    inputs: [
+      { name: "strategyId",     type: "uint256", indexed: true  },
+      { name: "shouldRebalance", type: "bool",   indexed: false },
+      { name: "stopLossHit",    type: "bool",    indexed: false },
+    ],
+  },
+  {
+    type: "event", name: "AgentAuthorized",
+    inputs: [
+      { name: "agent",  type: "address", indexed: true  },
+      { name: "status", type: "bool",    indexed: false },
+    ],
+  },
+] as const;

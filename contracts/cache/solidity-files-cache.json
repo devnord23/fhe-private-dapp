@@ -810,6 +810,49 @@
       "artifacts": [
         "MockERC20"
       ]
+    },
+    "/workspace/contracts/contracts/ConfidentialStrategyAgent.sol": {
+      "lastModificationDate": 1779889300276,
+      "contentHash": "ea3528de650a591572d94e97d7e7fc41",
+      "sourceName": "contracts/ConfidentialStrategyAgent.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 500
+          },
+          "evmVersion": "cancun",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "fhevm/lib/TFHE.sol",
+        "fhevm/config/ZamaFHEVMConfig.sol",
+        "fhevm/config/ZamaGatewayConfig.sol",
+        "fhevm/gateway/GatewayCaller.sol",
+        "fhevm/gateway/lib/Gateway.sol",
+        "@openzeppelin/contracts/utils/ReentrancyGuard.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "ConfidentialStrategyAgent"
+      ]
     }
   }
 }
