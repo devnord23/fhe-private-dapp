@@ -1,8 +1,7 @@
 "use client";
 
 import { useChainId } from "wagmi";
-import { NETWORK_NAMES } from "@/lib/constants";
-import type { ChainId } from "@/types";
+import { NETWORK_NAMES, type SupportedChainId } from "@/lib/constants";
 
 const DEMO_STATS = {
   totalShielded: "4,281,900",
@@ -12,7 +11,7 @@ const DEMO_STATS = {
 };
 
 export function NetworkStats() {
-  const chainId = useChainId() as ChainId;
+  const chainId = useChainId() as SupportedChainId;
   const networkName = NETWORK_NAMES[chainId] ?? "Testnet";
 
   return (

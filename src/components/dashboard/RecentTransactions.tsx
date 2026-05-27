@@ -26,7 +26,6 @@ function statusBadge(status: TransferStatus) {
     confirming: { variant: "warning", label: "Confirming" },
     pending: { variant: "info", label: "Pending" },
     failed: { variant: "danger", label: "Failed" },
-    shielded: { variant: "purple", label: "Shielded" },
   };
   const { variant, label } = map[status] ?? { variant: "default", label: status };
   return <Badge variant={variant} dot>{label}</Badge>;

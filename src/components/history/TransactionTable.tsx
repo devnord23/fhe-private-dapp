@@ -34,7 +34,6 @@ function StatusBadge({ status }: { status: TransferStatus }) {
     confirming: { label: "Confirming", variant: "warning" },
     pending: { label: "Pending", variant: "info" },
     failed: { label: "Failed", variant: "danger" },
-    shielded: { label: "Shielded", variant: "purple" },
   };
   const { label, variant } = cfg[status] ?? { label: status, variant: "default" };
   return <Badge variant={variant} dot>{label}</Badge>;
@@ -47,7 +46,7 @@ function AmountCell({ tx, address }: { tx: Transfer; address: string }) {
   return (
     <div className="text-right">
       {isPrivate ? (
-        <Tooltip content={`Encrypted: ${tx.encryptedAmount?.slice(0, 18) ?? "—"}…`}>
+        <Tooltip content="Amount encrypted by fhEVM — only you can re-encrypt and read it">
           <span className="font-mono text-sm text-gray-400 cursor-help">
             *** {tx.tokenSymbol}
           </span>
@@ -119,7 +118,7 @@ export function TransactionTable() {
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-400 font-medium">Status:</span>
-          {(["all", "confirmed", "pending", "failed"] as FilterStatus[]).map((s) => (
+          {(["all", "confirmed", "confirming", "pending", "failed"] as FilterStatus[]).map((s) => (
             <button
               key={s}
               onClick={() => { setFilterStatus(s); setPage(0); }}

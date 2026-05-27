@@ -3,16 +3,20 @@
 import { useEffect, useState } from "react";
 import { useAccount, useChainId } from "wagmi";
 import type { Transfer, TransferType, TransferStatus } from "@/types";
-import {
-  formatTokenAmount,
-  mockCommitment,
-  shortenAddress,
-} from "@/lib/utils";
+import { formatTokenAmount } from "@/lib/utils";
 
-/** Local storage key – per account */
 const storageKey = (address: string) =>
   `ct_transfers_${address.toLowerCase()}`;
 
+/**
+ * Seed a small set of demo transfers so the UI has something to display when
+ * the user first connects (before they have made any real transactions).
+ *
+ * These are LOCAL records only – they are NOT on-chain and NOT encrypted.
+ * The amounts shown for "confidential" type entries would normally be hidden
+ * (shown as "***" in the UI), reflecting that real on-chain transfers reveal
+ * no amount information.
+ */
 function seedDemoTransfers(address: `0x${string}`): Transfer[] {
   const now = Date.now();
   const peers: `0x${string}`[] = [
@@ -21,7 +25,7 @@ function seedDemoTransfers(address: `0x${string}`): Transfer[] {
     "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B",
   ];
 
-  const demoRows: Array<{
+  const rows: Array<{
     type: TransferType;
     status: TransferStatus;
     amount: string;
@@ -35,24 +39,20 @@ function seedDemoTransfers(address: `0x${string}`): Transfer[] {
     { type: "confidential", status: "pending", amount: "200", peer: peers[0], ago: 600_000 },
   ];
 
-  return demoRows.map((row, i) => {
-    const amountBig = BigInt(Math.round(parseFloat(row.amount) * 1e18));
+  return rows.map((row, i) => {
+    // Demo amounts use 6 decimals (like USDC)
+    const amountRaw = BigInt(Math.round(parseFloat(row.amount) * 1_000_000));
     return {
       id: `demo-${i}`,
       txHash: `0x${i.toString().padStart(2, "0")}${"ab".repeat(31)}` as `0x${string}`,
       from: row.type === "shield" || row.type === "confidential" ? address : row.peer,
       to: row.type === "unshield" || row.type === "confidential" ? row.peer : address,
-      amount: amountBig,
+      amount: amountRaw,
       amountFormatted: row.amount,
-      tokenSymbol: "CTOK",
+      tokenSymbol: "cUSDC",
       type: row.type,
       status: row.status,
       timestamp: now - row.ago,
-      encryptedAmount:
-        row.type === "confidential"
-          ? mockCommitment(row.amount, `seed-${i}`)
-          : undefined,
-      proof: row.type === "confidential" ? null : undefined,
     };
   });
 }
@@ -76,7 +76,7 @@ export function useTransferHistory() {
       const stored = localStorage.getItem(storageKey(address));
       if (stored) {
         const parsed: Transfer[] = JSON.parse(stored, (key, value) => {
-          if (key === "amount" || key === "gasUsed" || key === "blockNumber") {
+          if (key === "amount" || key === "blockNumber") {
             return typeof value === "string" ? BigInt(value) : value;
           }
           return value;
@@ -130,13 +130,12 @@ export function useTransferHistory() {
       .filter((t) => t.status === "confirmed" && t.to === address)
       .reduce((sum, t) => sum + t.amount, 0n),
     count: transfers.length,
-    confidentialCount: transfers.filter((t) => t.type === "confidential")
-      .length,
+    confidentialCount: transfers.filter((t) => t.type === "confidential").length,
     formattedSent: "",
     formattedReceived: "",
   };
-  stats.formattedSent = formatTokenAmount(stats.totalSent);
-  stats.formattedReceived = formatTokenAmount(stats.totalReceived);
+  stats.formattedSent = formatTokenAmount(stats.totalSent, 6);
+  stats.formattedReceived = formatTokenAmount(stats.totalReceived, 6);
 
   return { transfers, isLoading, addTransfer, updateTransfer, stats };
 }

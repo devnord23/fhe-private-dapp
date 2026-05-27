@@ -91,29 +91,40 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
           {
-            title: "Zero-Knowledge Proofs",
+            title: "Fully Homomorphic Encryption",
             description:
-              "Every confidential transfer is backed by a cryptographic ZK proof that verifies correctness without revealing amounts.",
+              "Powered by Zama's fhEVM. Balances are stored as encrypted ciphertexts on Zama nodes. The contract performs arithmetic (add, sub, compare) on ciphertexts — amounts are never decrypted on-chain.",
             icon: "🔐",
+            tag: "Real",
           },
           {
-            title: "On-chain Privacy",
+            title: "fhevmjs Client Encryption",
             description:
-              "Amounts are committed using Pedersen commitments stored on-chain. Only sender and receiver can decrypt.",
+              "The browser SDK encrypts amounts locally before any transaction is sent. The plaintext never leaves your device. The contract receives a ciphertext handle + input proof.",
             icon: "🛡️",
+            tag: "Real",
           },
           {
-            title: "Non-custodial",
+            title: "Gateway-mediated Unshield",
             description:
-              "You hold your keys. The smart contract is the only custodian of shielded funds, enforced by code.",
+              "Withdrawal amounts are encrypted in the transaction. The Zama Gateway decrypts asynchronously and triggers the ERC-20 transfer on-chain. Balance viewing via re-encryption is TODO.",
             icon: "🔑",
+            tag: "Partial",
           },
         ].map((feature) => (
           <div
             key={feature.title}
             className="rounded-2xl border border-surface-400/40 bg-surface-700 p-5 hover:border-surface-300 transition-colors"
           >
-            <div className="text-2xl mb-3">{feature.icon}</div>
+            <div className="flex items-start justify-between mb-3">
+              <span className="text-2xl">{feature.icon}</span>
+              <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border
+                ${feature.tag === "Real"
+                  ? "bg-brand-500/10 text-brand-400 border-brand-500/20"
+                  : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"}`}>
+                {feature.tag}
+              </span>
+            </div>
             <h4 className="text-sm font-semibold text-white mb-1.5">{feature.title}</h4>
             <p className="text-xs text-gray-400 leading-relaxed">{feature.description}</p>
           </div>

@@ -63,33 +63,6 @@ export function formatTimestamp(timestamp: number): string {
   });
 }
 
-/**
- * Simulate a Pedersen commitment for demonstration purposes.
- * In production this would be a real ZK commitment computed client-side.
- */
-export function mockCommitment(amount: string, nonce?: string): `0x${string}` {
-  const seed = `${amount}-${nonce ?? Date.now()}`;
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (Math.imul(31, hash) + seed.charCodeAt(i)) | 0;
-  }
-  const hex = Math.abs(hash).toString(16).padStart(8, "0").repeat(8);
-  return `0x${hex.slice(0, 64)}` as `0x${string}`;
-}
-
-/**
- * Mock a ZK proof blob for UI demonstration.
- * A real implementation would call a WASM prover (e.g. snarkjs / noir).
- */
-export function mockProof(): `0x${string}` {
-  const bytes = Array.from({ length: 64 }, () =>
-    Math.floor(Math.random() * 256)
-      .toString(16)
-      .padStart(2, "0")
-  ).join("");
-  return `0x${bytes}` as `0x${string}`;
-}
-
 export function isValidAddress(value: string): value is `0x${string}` {
   return /^0x[0-9a-fA-F]{40}$/.test(value);
 }
@@ -109,6 +82,7 @@ export function getExplorerUrl(
     11155111: "https://sepolia.etherscan.io",
     8453: "https://basescan.org",
     84532: "https://sepolia.basescan.org",
+    9000: "https://main.explorer.zama.ai",
   };
   const base = explorers[chainId] ?? "https://etherscan.io";
   return `${base}/${type}/${value}`;

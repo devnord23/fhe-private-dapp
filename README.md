@@ -1,102 +1,116 @@
-# ConfidentialFi – Confidential Transfer DApp
+# ConfidentialFi – Zama fhEVM Confidential Transfer DApp
 
-A full-stack Web3 application for private token transfers using zero-knowledge proofs, built with **Next.js 15**, **TypeScript**, **Tailwind CSS**, **RainbowKit**, **wagmi**, and **viem**.
-
----
-
-## Features
-
-- **Wallet Connection** – RainbowKit modal supporting MetaMask, WalletConnect, Coinbase Wallet, and 200+ others
-- **Confidential Transfers** – Send tokens where the amount is hidden using Pedersen commitments and ZK proofs
-- **Shield / Unshield** – Move tokens in and out of the private pool
-- **Transfer History** – Paginated, filterable table with private-amount masking
-- **Dashboard** – Balance overview, protocol stats, and recent activity feed
-- **Dark UI** – Full dark theme with subtle green accent, glass effects, and smooth animations
-- **Responsive** – Mobile-first layout with a native-feel bottom navigation bar
-- **Vercel-Ready** – Zero-config deployment with App Router and Edge compatibility
+A full-stack Web3 application for confidential token transfers using Zama's **Fully Homomorphic Encryption** (fhEVM).  Built with Next.js 15, TypeScript, Tailwind CSS, RainbowKit, wagmi, and viem.
 
 ---
 
-## Tech Stack
+## What Is Real vs TODO
 
-| Layer | Library |
+This project is explicit about what is working today versus what still requires implementation.
+
+### ✅ Real (implemented and honest)
+
+| Layer | What is real |
 |---|---|
-| Framework | Next.js 15 (App Router) |
-| Language | TypeScript 5 |
-| Styling | Tailwind CSS 3 |
-| Wallet UX | RainbowKit v2 |
-| Blockchain hooks | wagmi v2 |
-| Low-level Ethereum | viem v2 |
-| Server state | TanStack Query v5 |
+| **Smart contract** | `ConfidentialToken.sol` uses `TFHE.sol` types (`euint64`, `einput`, `ebool`), real Hardhat fhEVM plugin, real Gateway callback pattern for unshield |
+| **Client encryption** | `fhevmjs` encrypts transfer amounts using the network's actual FHE public key before the transaction is signed. The plaintext never leaves the browser |
+| **Homomorphic checks** | `TFHE.le(amount, balance)` and `TFHE.select()` run on ciphertexts – the contract never decrypts the values it compares |
+| **Gateway unshield** | `requestUnshield` + `callbackUnshield` implements the real Zama Gateway async decryption pattern |
+| **Hardhat tests** | Tests use `fhevmjs/lib/fhevmjsMock` (the fhEVM Hardhat plugin mock), not fake random data |
+| **ABI** | The ABI in `src/lib/constants.ts` matches `ConfidentialToken.sol` exactly, with honest comments about fhEVM ABI encoding |
+
+### 🔧 TODO (not yet wired in the UI)
+
+| Feature | Status | Where to complete |
+|---|---|---|
+| **Shielded balance display** | The contract returns an encrypted handle; the UI shows it as `ENCRYPTED`. Decrypting it requires a re-encryption flow | `src/hooks/useTokenBalance.ts` – implement `useFhevm().instance.reencrypt()` with EIP-712 user signature |
+| **ERC-20 approval UX** | Users must call `underlying.approve(contract, amount)` before shielding. There is no approval step in the UI today | Add an approval transaction step before the shield button |
+| **Zama system contract addresses** | `NEXT_PUBLIC_FHEVM_ACL_ADDRESS` and `NEXT_PUBLIC_FHEVM_KMS_ADDRESS` must be set from Zama's docs | See `.env.example` |
+| **ConfidentialToken deployed** | The contract address env vars contain `0x000…` placeholders | Deploy `contracts/` and update `.env.local` |
+
+### ❌ Removed (was false in the previous version)
+
+The previous version of this codebase contained:
+- `mockCommitment()` – a trivial hash function claimed to be a "Pedersen commitment" — **removed**
+- `mockProof()` – random bytes claimed to be a "ZK proof" — **removed**
+- ABI comment claiming "amounts stored as Pedersen commitments" — **corrected**
+- Badge claiming "ZK Proof Generated" — **corrected** (fhEVM uses FHE, not ZK proofs)
+
+---
+
+## How fhEVM Works (vs ZK Proofs)
+
+This contract uses **Fully Homomorphic Encryption**, not Zero-Knowledge proofs.  These are different cryptographic primitives:
+
+| | FHE (this project) | ZK Proofs (e.g. Tornado Cash) |
+|---|---|---|
+| Computation on encrypted data | ✅ Yes – contract computes on ciphertexts | ❌ No – circuit proves a statement about plaintext |
+| Amount hidden on-chain | ✅ Yes (handle only) | ✅ Yes (commitment) |
+| Client-side prover | fhevmjs encrypt (fast, ~ms) | WASM prover (slow, ~seconds) |
+| Smart contract | TFHE.sol arithmetic | On-chain verifier (e.g. Groth16) |
+| Balance viewing | Re-encrypt to user key pair via Gateway | Nullifier/note scanning |
 
 ---
 
 ## Project Structure
 
 ```
-src/
-├── app/                    # Next.js App Router pages
-│   ├── layout.tsx          # Root layout – wraps providers, navbar, mobile nav
-│   ├── page.tsx            # Redirects / → /dashboard
-│   ├── dashboard/page.tsx  # Portfolio overview page
-│   ├── transfer/page.tsx   # Shield / unshield / confidential send page
-│   └── history/page.tsx    # Paginated transfer history page
+.
+├── contracts/                  # Solidity contracts (Hardhat + fhEVM)
+│   ├── contracts/
+│   │   ├── ConfidentialToken.sol   # Main contract using TFHE.sol
+│   │   └── MockERC20.sol           # ERC-20 for local testing
+│   ├── scripts/
+│   │   ├── deploy.ts               # Deploy to Zama Devnet or Sepolia
+│   │   └── interact.ts             # Example shield→transfer→unshield flow
+│   ├── test/
+│   │   └── ConfidentialToken.test.ts  # Hardhat tests with fhEVM mock
+│   ├── hardhat.config.ts           # Networks: hardhat (mock), zamaDevnet, sepolia
+│   ├── package.json
+│   └── .env.example
 │
-├── components/
-│   ├── ui/                 # Headless, reusable primitives
-│   │   ├── Button.tsx      # Polymorphic button with variants (primary / secondary / ghost / danger / outline)
-│   │   ├── Card.tsx        # Card + CardHeader + CardTitle + CardContent
-│   │   ├── Input.tsx       # Labeled input with left/right addons, error state
-│   │   ├── Badge.tsx       # Status / type badges with dot indicator
-│   │   └── Tooltip.tsx     # Hover tooltip
-│   │
-│   ├── wallet/
-│   │   └── ConnectButton.tsx  # Custom RainbowKit connect button (address pill, chain switcher)
-│   │
-│   ├── layout/
-│   │   ├── Navbar.tsx      # Sticky top navbar with logo + desktop nav + wallet button
-│   │   └── MobileNav.tsx   # Fixed bottom tab bar for mobile
-│   │
-│   ├── dashboard/
-│   │   ├── BalanceCard.tsx       # Public + shielded balance display with CTA buttons
-│   │   ├── StatsCard.tsx         # Metric tile with icon, trend indicator
-│   │   ├── RecentTransactions.tsx # Latest 5 transfers feed
-│   │   └── NetworkStats.tsx       # Protocol-level aggregates
-│   │
-│   ├── transfer/
-│   │   ├── TransferForm.tsx  # Tabbed form: Confidential Send / Shield / Unshield
-│   │   └── HowItWorks.tsx    # Step-by-step protocol explanation
-│   │
-│   └── history/
-│       ├── TransactionTable.tsx  # Desktop table + mobile card list with pagination
-│       └── HistoryStats.tsx      # Summary stat tiles for history page
-│
-├── hooks/
-│   ├── useTokenBalance.ts          # Reads public + shielded balances via wagmi
-│   ├── useTransferHistory.ts       # localStorage-backed history with demo seeding
-│   └── useConfidentialTransfer.ts  # shield / unshield / confidentialTransfer actions
-│
-├── lib/
-│   ├── wagmi.ts       # wagmi + RainbowKit config (chains, projectId)
-│   ├── constants.ts   # Contract addresses, ABI, chain IDs, polling config
-│   └── utils.ts       # cn(), formatTokenAmount, shortenAddress, ZK mock helpers
-│
-├── providers/
-│   └── Web3Provider.tsx  # WagmiProvider + QueryClientProvider + RainbowKitProvider
-│
-└── types/
-    └── index.ts  # Shared TypeScript interfaces (Transfer, TokenBalance, etc.)
+└── src/                        # Next.js 15 frontend
+    ├── app/
+    │   ├── layout.tsx              # Root layout, Web3Provider
+    │   ├── dashboard/page.tsx      # Portfolio overview
+    │   ├── transfer/page.tsx       # Shield / Confidential Send / Unshield
+    │   └── history/page.tsx        # Transfer history table
+    ├── components/
+    │   ├── ui/                     # Button, Card, Input, Badge, Tooltip
+    │   ├── layout/                 # Navbar (desktop) + MobileNav (bottom tabs)
+    │   ├── wallet/                 # RainbowKit custom ConnectButton
+    │   ├── dashboard/              # BalanceCard (TODO: re-encryption), StatsCard, etc.
+    │   ├── transfer/               # TransferForm (real fhevmjs), HowItWorks
+    │   └── history/                # TransactionTable (filters, pagination)
+    ├── hooks/
+    │   ├── useFhevm.ts             # Loads fhevmjs WASM, returns FhevmInstance
+    │   ├── useConfidentialTransfer.ts  # shield / confidentialTransfer / requestUnshield
+    │   ├── useTokenBalance.ts      # Reads encrypted handle (TODO: reencrypt)
+    │   └── useTransferHistory.ts   # localStorage-backed tx history
+    ├── lib/
+    │   ├── fhevm.ts                # createFhevmInstance, encodeEncryptedInput
+    │   ├── wagmi.ts                # Zama Devnet custom chain + wagmi config
+    │   ├── constants.ts            # ABI, contract addresses, chain IDs
+    │   └── utils.ts                # Formatting utilities (no fake crypto)
+    ├── providers/
+    │   └── Web3Provider.tsx        # wagmi + tanstack query + rainbowkit
+    └── types/
+        └── index.ts                # Transfer, ShieldParams, etc.
 ```
 
 ---
 
 ## Quick Start
 
-### 1. Clone & install
+### Prerequisites
+
+- Node.js 18+
+- A wallet with Zama Devnet configured (chain ID 9000, RPC: `https://devnet.zama.ai`)
+- A WalletConnect project ID from [cloud.walletconnect.com](https://cloud.walletconnect.com)
+
+### 1. Install frontend dependencies
 
 ```bash
-git clone https://github.com/your-org/fhe-private-dapp.git
-cd fhe-private-dapp
 npm install
 ```
 
@@ -106,16 +120,16 @@ npm install
 cp .env.example .env.local
 ```
 
-Open `.env.local` and fill in:
+Fill in `.env.local`:
 
 | Variable | Description | Where to get it |
 |---|---|---|
-| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | WalletConnect Cloud project ID | [cloud.walletconnect.com](https://cloud.walletconnect.com) |
-| `NEXT_PUBLIC_CONTRACT_ADDRESS_SEPOLIA` | ConfidentialToken on Sepolia | Deploy the contract (see below) |
-| `NEXT_PUBLIC_CONTRACT_ADDRESS_BASE_SEPOLIA` | ConfidentialToken on Base Sepolia | Deploy the contract (see below) |
-| `NEXT_PUBLIC_RPC_URL_SEPOLIA` | (Optional) Alchemy/Infura RPC | [alchemy.com](https://alchemy.com) |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | WalletConnect Cloud ID | [cloud.walletconnect.com](https://cloud.walletconnect.com) |
+| `NEXT_PUBLIC_FHEVM_ACL_ADDRESS` | Zama ACL system contract | [docs.zama.ai/fhevm/references/contracts](https://docs.zama.ai/fhevm/references/contracts) |
+| `NEXT_PUBLIC_FHEVM_KMS_ADDRESS` | Zama KMS Verifier contract | same link above |
+| `NEXT_PUBLIC_CONTRACT_ADDRESS_ZAMA_DEVNET` | Your deployed ConfidentialToken | after running `npm run deploy:zamaDevnet` in `contracts/` |
 
-### 3. Run the development server
+### 3. Run the dev server
 
 ```bash
 npm run dev
@@ -123,79 +137,101 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### 4. Build for production
+---
+
+## Smart Contract Setup
+
+### Install contract dependencies
 
 ```bash
-npm run build
-npm start
+cd contracts
+cp .env.example .env
+# Fill in DEPLOYER_PRIVATE_KEY and optionally UNDERLYING_TOKEN_ADDRESS
+npm install
 ```
+
+### Compile
+
+```bash
+npm run compile
+```
+
+### Run tests (uses fhEVM Hardhat mock – no real network needed)
+
+```bash
+npm test
+```
+
+The tests use `fhevmjs/lib/fhevmjsMock` which simulates the fhEVM precompiles locally. The mock makes Gateway callbacks fire synchronously in the same block, so you can verify the full shield→transfer→unshield flow without connecting to a real network.
+
+### Deploy to Zama Devnet
+
+```bash
+# Set DEPLOYER_PRIVATE_KEY in contracts/.env
+npm run deploy:zamaDevnet
+```
+
+The script deploys a MockERC20 (if no `UNDERLYING_TOKEN_ADDRESS` is set) and the ConfidentialToken, then prints the addresses. Copy the ConfidentialToken address to the frontend's `.env.local`.
+
+---
+
+## fhEVM System Contract Addresses
+
+The `fhevmjs` SDK requires two system contract addresses that are deployed by Zama on their networks.  **Do not invent these** – they must match the actual contracts on the chain you are using.
+
+Find the correct addresses at: **https://docs.zama.ai/fhevm/references/contracts**
+
+Then add them to `.env.local`:
+```
+NEXT_PUBLIC_FHEVM_ACL_ADDRESS=<from docs>
+NEXT_PUBLIC_FHEVM_KMS_ADDRESS=<from docs>
+```
+
+Without these, fhevmjs will throw when trying to create an encrypted input.
 
 ---
 
 ## Deploy to Vercel
 
 1. Push your code to GitHub.
-2. Go to [vercel.com/new](https://vercel.com/new) and import the repository.
-3. Add environment variables in the Vercel dashboard (same as `.env.local`).
-4. Click **Deploy**. Vercel auto-detects Next.js and configures everything.
+2. Import the repository at [vercel.com/new](https://vercel.com/new).
+3. Set all environment variables from `.env.example` in the Vercel dashboard.
+4. Click **Deploy**.
 
 ---
 
-## Smart Contract
+## Implementing the TODO: Balance Display
 
-The dapp expects a `ConfidentialToken` contract with the following interface (ABI defined in `src/lib/constants.ts`):
-
-```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
-
-interface IConfidentialToken {
-    // Read
-    function publicBalanceOf(address account) external view returns (uint256);
-    function shieldedBalanceOf(address account) external view returns (bytes32 commitment);
-    function totalShielded() external view returns (uint256);
-    function transferCount(address account) external view returns (uint256);
-
-    // Write
-    function shield(uint256 amount) external;
-    function unshield(uint256 amount, address recipient) external;
-    function confidentialTransfer(
-        address to,
-        bytes32 encryptedAmount,
-        bytes calldata proof,
-        bytes calldata note
-    ) external;
-
-    // Events
-    event Shielded(address indexed account, uint256 amount);
-    event Unshielded(address indexed account, address indexed recipient, uint256 amount);
-    event ConfidentialTransfer(address indexed from, address indexed to, bytes32 encryptedAmount);
-}
-```
-
-For a production deployment you would implement:
-- **Pedersen commitments** for amount hiding
-- **Groth16 / PLONK verifier** (generated via [Noir](https://noir-lang.org/) or [snarkjs](https://github.com/iden3/snarkjs))
-- **View key** derivation for balance decryption
-
-A ready-made reference implementation can be found in [Aztec Protocol](https://docs.aztec.network/) or [Semaphore](https://semaphore.pse.dev/).
-
----
-
-## ZK Proof Note
-
-In this demo the proof generation calls `mockProof()` in `src/lib/utils.ts` which generates a random 64-byte blob. In production, replace this with a real WASM prover:
+The encrypted balance handle returned by `encryptedBalanceOf()` can be decrypted
+client-side using the re-encryption flow. Here is the code to wire in `useTokenBalance.ts`:
 
 ```ts
-// Example using snarkjs
-import { groth16 } from "snarkjs";
+// 1. Get the encrypted handle from the contract
+const handle = await readContract({ functionName: 'encryptedBalanceOf', args: [address] });
 
-const { proof, publicSignals } = await groth16.fullProve(
-  { amount, senderKey, receiverKey, nonce },
-  "circuit.wasm",
-  "circuit_final.zkey"
+// 2. Generate a temporary NaCl keypair (do this once per session)
+const { publicKey, privateKey } = fhevmInstance.generateKeypair();
+
+// 3. Build EIP-712 message and ask user to sign it
+const eip712 = fhevmInstance.createEIP712(publicKey, contractAddress);
+const signature = await walletClient.signTypedData({
+  domain: eip712.domain,
+  types: eip712.types,
+  primaryType: eip712.primaryType,
+  message: eip712.message,
+});
+
+// 4. Re-encrypt via Zama Gateway and decrypt locally
+const plainBalance = await fhevmInstance.reencrypt(
+  handle as bigint,        // euint64 handle from contract
+  privateKey,
+  publicKey,
+  signature,
+  contractAddress,
+  address
 );
-const proofBytes = encodeProof(proof); // ABI-encode for on-chain verification
+
+console.log('Balance:', plainBalance); // bigint
 ```
 
 ---

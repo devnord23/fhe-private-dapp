@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useAccount } from "wagmi";
 import { useConfidentialTransfer } from "@/hooks/useConfidentialTransfer";
-import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
@@ -16,27 +15,29 @@ const TAB_CONFIG: { id: Tab; label: string; description: string }[] = [
   {
     id: "confidential",
     label: "Confidential Send",
-    description: "Transfer tokens privately. The amount is hidden on-chain using a ZK commitment.",
+    description:
+      "Transfer tokens inside the encrypted pool. The amount is encrypted by fhevmjs before the transaction is submitted — it never appears in plaintext on-chain.",
   },
   {
     id: "shield",
     label: "Shield",
-    description: "Move tokens from your public wallet into the private pool.",
+    description:
+      "Deposit public ERC-20 tokens into the confidential pool. The deposited amount is visible at this step because it comes from your public wallet. Privacy applies to subsequent transfers.",
   },
   {
     id: "unshield",
     label: "Unshield",
-    description: "Withdraw tokens from the private pool back to a public address.",
+    description:
+      "Withdraw from the pool back to a public address. The withdrawal amount is encrypted and sent to the Zama Gateway, which decrypts it and triggers the ERC-20 transfer (~1-2 blocks).",
   },
 ];
 
 interface FormState {
   recipient: string;
   amount: string;
-  note: string;
 }
 
-const INITIAL_FORM: FormState = { recipient: "", amount: "", note: "" };
+const INITIAL_FORM: FormState = { recipient: "", amount: "" };
 
 export function TransferForm() {
   const { isConnected } = useAccount();
@@ -44,11 +45,11 @@ export function TransferForm() {
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const { balance } = useTokenBalance();
   const {
     shield,
-    unshield,
     confidentialTransfer,
+    requestUnshield,
+    fhevmReady,
     isPending,
     error,
     clearError,
@@ -65,12 +66,6 @@ export function TransferForm() {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
-  function setMax() {
-    if (!balance) return;
-    const bal = tab === "unshield" ? balance.formatted.shielded : balance.formatted.public;
-    handleField("amount", bal.replace(/,/g, ""));
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     clearError();
@@ -81,15 +76,14 @@ export function TransferForm() {
     if (tab === "shield") {
       hash = await shield({ amount: form.amount });
     } else if (tab === "unshield") {
-      hash = await unshield({
+      hash = await requestUnshield({
         amount: form.amount,
         recipient: form.recipient as `0x${string}`,
       });
     } else {
       hash = await confidentialTransfer({
-        to: form.recipient as `0x${string}`,
+        to: form.recipient,
         amount: form.amount,
-        note: form.note || undefined,
       });
     }
 
@@ -99,10 +93,13 @@ export function TransferForm() {
     }
   }
 
+  const needsFhevm = tab === "confidential" || tab === "unshield";
+
   const canSubmit =
     isConnected &&
     isValidAmount(form.amount) &&
-    (tab === "shield" || isValidAddress(form.recipient));
+    (tab === "shield" || isValidAddress(form.recipient)) &&
+    (!needsFhevm || fhevmReady);
 
   return (
     <div className="rounded-2xl border border-surface-400/50 bg-surface-700 overflow-hidden">
@@ -111,7 +108,12 @@ export function TransferForm() {
         {TAB_CONFIG.map((t) => (
           <button
             key={t.id}
-            onClick={() => { setTab(t.id); setForm(INITIAL_FORM); clearError(); setSuccess(null); }}
+            onClick={() => {
+              setTab(t.id);
+              setForm(INITIAL_FORM);
+              clearError();
+              setSuccess(null);
+            }}
             className={cn(
               "flex-1 py-4 text-sm font-medium transition-colors duration-150 relative",
               tab === t.id
@@ -129,12 +131,57 @@ export function TransferForm() {
 
       <div className="p-6">
         {/* Description */}
-        <div className="mb-6 flex items-start gap-3 rounded-xl bg-surface-600/40 border border-surface-400/30 p-4">
-          <svg className="h-5 w-5 text-brand-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        <div className="mb-5 flex items-start gap-3 rounded-xl bg-surface-600/40 border border-surface-400/30 p-4">
+          <svg
+            className="h-5 w-5 text-brand-400 shrink-0 mt-0.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.8}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           <p className="text-sm text-gray-400">{tabConfig.description}</p>
         </div>
+
+        {/* fhEVM status banner (shown for confidential / unshield tabs) */}
+        {needsFhevm && isConnected && (
+          <div
+            className={cn(
+              "mb-4 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm",
+              fhevmReady
+                ? "bg-brand-500/5 border-brand-500/20 text-brand-400"
+                : "bg-yellow-500/5 border-yellow-500/20 text-yellow-400"
+            )}
+          >
+            {fhevmReady ? (
+              <>
+                <svg className="h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span>fhEVM encryption ready — amounts will be encrypted via fhevmjs before submission.</span>
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                <span>
+                  Loading fhEVM encryption module… Connect to <strong>Zama Devnet</strong> (chain ID 9000) if this stalls.
+                </span>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Not connected */}
         {!isConnected && (
@@ -146,11 +193,22 @@ export function TransferForm() {
         {/* Success */}
         {success && (
           <div className="mb-4 rounded-xl bg-brand-500/10 border border-brand-500/20 p-4 flex items-start gap-3">
-            <svg className="h-5 w-5 text-brand-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg
+              className="h-5 w-5 text-brand-400 shrink-0 mt-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div>
               <p className="text-sm font-medium text-brand-400">Transaction submitted!</p>
+              {tab === "unshield" && (
+                <p className="text-xs text-gray-400 mt-0.5">
+                  The Zama Gateway will decrypt the amount and trigger the ERC-20 transfer in ~1-2 blocks.
+                </p>
+              )}
               <p className="text-xs text-gray-400 font-mono mt-1 break-all">{success}</p>
             </div>
           </div>
@@ -159,25 +217,32 @@ export function TransferForm() {
         {/* Error */}
         {error && (
           <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 p-4 flex items-start gap-3">
-            <svg className="h-5 w-5 text-red-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="h-5 w-5 text-red-400 shrink-0 mt-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
             <p className="text-sm text-red-400">{error}</p>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Recipient – not needed for shield */}
           {tab !== "shield" && (
             <Input
               label="Recipient Address"
-              placeholder="0x..."
+              placeholder="0x…"
               value={form.recipient}
               onChange={(e) => handleField("recipient", e.target.value)}
               error={
-                form.recipient && !recipientValid
-                  ? "Invalid Ethereum address"
-                  : undefined
+                form.recipient && !recipientValid ? "Invalid Ethereum address" : undefined
               }
               disabled={!isConnected || isPending}
               leftAddon={
@@ -188,63 +253,42 @@ export function TransferForm() {
             />
           )}
 
-          {/* Amount */}
-          <div>
-            <Input
-              label="Amount"
-              placeholder="0.00"
-              type="number"
-              min="0"
-              step="any"
-              value={form.amount}
-              onChange={(e) => handleField("amount", e.target.value)}
-              error={
-                form.amount && !amountValid ? "Enter a positive number" : undefined
-              }
-              disabled={!isConnected || isPending}
-              rightAddon={
-                <button
-                  type="button"
-                  onClick={setMax}
-                  className="text-xs text-brand-400 hover:text-brand-300 font-semibold transition-colors"
-                >
-                  MAX
-                </button>
-              }
-            />
-            {balance && (
-              <div className="mt-1.5 flex items-center justify-between text-xs text-gray-500">
-                <span>
-                  {tab === "unshield"
-                    ? `Shielded: ${balance.formatted.shielded} ${balance.symbol}`
-                    : `Public: ${balance.formatted.public} ${balance.symbol}`}
-                </span>
-              </div>
-            )}
-          </div>
+          <Input
+            label="Amount"
+            placeholder="0.00"
+            type="number"
+            min="0"
+            step="any"
+            value={form.amount}
+            onChange={(e) => handleField("amount", e.target.value)}
+            error={form.amount && !amountValid ? "Enter a positive number" : undefined}
+            disabled={!isConnected || isPending}
+          />
 
-          {/* Note – confidential only */}
-          {tab === "confidential" && (
-            <Input
-              label="Encrypted Note (optional)"
-              placeholder="Private memo – encrypted on-chain"
-              value={form.note}
-              onChange={(e) => handleField("note", e.target.value)}
-              disabled={!isConnected || isPending}
-              leftAddon={
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                </svg>
-              }
-            />
-          )}
-
-          {/* Privacy reminder */}
+          {/* Honest status badges */}
           {tab === "confidential" && (
             <div className="flex flex-wrap gap-2">
-              <Badge variant="confidential">ZK Proof Generated</Badge>
-              <Badge variant="purple">Amount Hidden On-chain</Badge>
-              <Badge variant="info">End-to-end Encrypted</Badge>
+              <Badge variant={fhevmReady ? "success" : "warning"}>
+                {fhevmReady ? "fhevmjs Encrypted" : "fhevmjs Loading…"}
+              </Badge>
+              <Badge variant="info">TFHE Homomorphic Arithmetic</Badge>
+              <Badge variant="purple">No Plaintext On-chain</Badge>
+            </div>
+          )}
+
+          {tab === "shield" && (
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="warning">Amount Public at Shield Step</Badge>
+              <Badge variant="info">Privacy Begins After Shield</Badge>
+            </div>
+          )}
+
+          {tab === "unshield" && (
+            <div className="flex flex-wrap gap-2">
+              <Badge variant={fhevmReady ? "success" : "warning"}>
+                {fhevmReady ? "Amount Encrypted" : "fhevmjs Loading…"}
+              </Badge>
+              <Badge variant="info">Gateway Decrypts Asynchronously</Badge>
             </div>
           )}
 
@@ -261,9 +305,15 @@ export function TransferForm() {
               : tab === "shield"
               ? "Shield Tokens"
               : tab === "unshield"
-              ? "Unshield Tokens"
+              ? "Request Unshield"
               : "Send Confidentially"}
           </Button>
+
+          {tab === "shield" && (
+            <p className="text-xs text-gray-500 text-center">
+              You must approve the contract to spend your ERC-20 tokens before shielding.
+            </p>
+          )}
         </form>
       </div>
     </div>

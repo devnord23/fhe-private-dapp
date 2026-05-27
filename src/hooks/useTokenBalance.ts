@@ -1,78 +1,89 @@
 "use client";
 
-import { useAccount, useChainId, useReadContract } from "wagmi";
-import { useMemo } from "react";
-import { CONFIDENTIAL_TOKEN_ABI, CONTRACT_ADDRESSES } from "@/lib/constants";
-import { formatTokenAmount } from "@/lib/utils";
-import type { ChainId, TokenBalance } from "@/types";
+/**
+ * useTokenBalance
+ *
+ * Reads the user's balance from ConfidentialToken.sol.
+ *
+ * REAL (works today):
+ *   - Reads the euint64 handle via encryptedBalanceOf() – the handle is a uint256
+ *     pointer to a ciphertext on the Zama node network.
+ *   - The handle itself is public; knowing it does NOT reveal the balance.
+ *
+ * TODO: Re-encryption (balance decryption)
+ *   To show the user their actual balance, the app must:
+ *   1. instance.generateKeypair()               → { publicKey, privateKey }
+ *   2. instance.createEIP712(publicKey, contractAddress)
+ *   3. walletClient.signTypedData(eip712)        → signature (user wallet prompt)
+ *   4. instance.reencrypt(handle, privateKey, publicKey, signature, contract, user)
+ *      → resolves to the plaintext bigint
+ *   This requires user interaction (wallet signature) so it is not done automatically.
+ *   The UI currently shows "-- (encrypted)" for the shielded balance until wired.
+ *
+ *   Implementation plan:
+ *     - Add a "Reveal Balance" button that triggers steps 1-4.
+ *     - Cache the decrypted value in sessionStorage (or in-memory) until the tab closes.
+ *     - The session key pair should be regenerated each session for forward secrecy.
+ */
 
-export function useTokenBalance(): {
-  balance: TokenBalance | null;
+import { useAccount, useChainId, useReadContract } from "wagmi";
+import { CONFIDENTIAL_TOKEN_ABI, CONTRACT_ADDRESSES, type SupportedChainId } from "@/lib/constants";
+
+export interface EncryptedBalanceHandle {
+  /** The raw euint64 handle (uint256 value returned by the contract). */
+  handle: bigint;
+  /**
+   * Whether the current user has ACL access to this handle.
+   * On Zama fhEVM, the contract grants access via TFHE.allow() during shield/transfer.
+   * If false, re-encryption will fail even with a valid keypair.
+   */
+  hasAccess: boolean;
+}
+
+export interface TokenBalanceResult {
+  /**
+   * The encrypted balance handle. Use fhevmjs.reencrypt() to get the actual value.
+   * null if the user has no shielded balance or is not connected.
+   */
+  encryptedBalance: EncryptedBalanceHandle | null;
   isLoading: boolean;
   refetch: () => void;
-} {
+}
+
+export function useTokenBalance(): TokenBalanceResult {
   const { address, isConnected } = useAccount();
-  const chainId = useChainId() as ChainId;
+  const chainId = useChainId() as SupportedChainId;
 
-  const contractAddress = CONTRACT_ADDRESSES[chainId] ?? CONTRACT_ADDRESSES[11155111];
+  const contractAddress =
+    CONTRACT_ADDRESSES[chainId] ?? CONTRACT_ADDRESSES[9000];
 
-  const { data: publicBal, isLoading: l1, refetch: r1 } = useReadContract({
+  const {
+    data: rawHandle,
+    isLoading,
+    refetch,
+  } = useReadContract({
     address: contractAddress,
     abi: CONFIDENTIAL_TOKEN_ABI,
-    functionName: "publicBalanceOf",
+    functionName: "encryptedBalanceOf",
     args: address ? [address] : undefined,
-    query: { enabled: isConnected && !!address },
+    query: {
+      enabled: isConnected && !!address,
+    },
   });
 
-  const { data: symbol, isLoading: l2 } = useReadContract({
-    address: contractAddress,
-    abi: CONFIDENTIAL_TOKEN_ABI,
-    functionName: "symbol",
-    query: { enabled: isConnected },
-  });
-
-  const { data: decimals, isLoading: l3 } = useReadContract({
-    address: contractAddress,
-    abi: CONFIDENTIAL_TOKEN_ABI,
-    functionName: "decimals",
-    query: { enabled: isConnected },
-  });
-
-  const { data: tokenName, isLoading: l4 } = useReadContract({
-    address: contractAddress,
-    abi: CONFIDENTIAL_TOKEN_ABI,
-    functionName: "name",
-    query: { enabled: isConnected },
-  });
-
-  const balance = useMemo<TokenBalance | null>(() => {
-    if (!isConnected || !address) return null;
-
-    const pub = (publicBal as bigint | undefined) ?? 0n;
-    const dec = (decimals as number | undefined) ?? 18;
-    const sym = (symbol as string | undefined) ?? "CTOK";
-    const name = (tokenName as string | undefined) ?? "Confidential Token";
-
-    // Shielded balance is derived from the commitment stored on-chain.
-    // Until we integrate a real view-key decryption SDK, we show a demo value.
-    const shielded = pub > 0n ? (pub * 3n) / 10n : 0n;
-
-    return {
-      public: pub,
-      shielded,
-      symbol: sym,
-      decimals: dec,
-      name,
-      formatted: {
-        public: formatTokenAmount(pub, dec),
-        shielded: formatTokenAmount(shielded, dec),
-      },
-    };
-  }, [isConnected, address, publicBal, symbol, decimals, tokenName]);
+  const handle = rawHandle as bigint | undefined;
+  const hasHandle = handle !== undefined && handle !== 0n;
 
   return {
-    balance,
-    isLoading: l1 || l2 || l3 || l4,
-    refetch: r1,
+    encryptedBalance: hasHandle
+      ? {
+          handle: handle,
+          // The contract grants ACL access (TFHE.allow) during shield() and transfer().
+          // If the user has a handle != 0, they were granted access.
+          hasAccess: true,
+        }
+      : null,
+    isLoading,
+    refetch,
   };
 }
