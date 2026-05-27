@@ -1,55 +1,103 @@
 /**
- * constants.ts
+ * constants.ts — Chain IDs, addresses, ABIs, and explorer URLs.
  *
- * Chain IDs, contract addresses, and the ABI for ConfidentialToken.sol.
+ * ═══════════════════════════════════════════════════════════════════════
+ *  MULTI-LAYER CHAIN MODEL  ("Private Agentic DeFi on Base")
+ * ═══════════════════════════════════════════════════════════════════════
  *
- * The ABI here MUST match contracts/contracts/ConfidentialToken.sol exactly.
- * If you update the Solidity contract, re-run `npm run compile` in contracts/
- * and regenerate this ABI from the resulting artifact JSON.
+ *  Layer 1 — SETTLEMENT (Base / Base Sepolia)
+ *  ───────────────────────────────────────────
+ *  Chain IDs: 8453 (Base mainnet) | 84532 (Base Sepolia testnet)
+ *  Role: Default wallet, user deposits, token settlement, gas payment.
+ *  Contracts: BaseVault.sol (TODO – not yet deployed)
+ *  Status: ⚠️  Wallet connection works; vault contract is a future TODO.
  *
- * REAL vs TODO status of each ABI entry is noted below.
+ *  Layer 2 — CONFIDENTIAL COMPUTE (Zama fhEVM)
+ *  ─────────────────────────────────────────────
+ *  Chain IDs: 9000 (Zama Devnet) | 11155111 (Sepolia, Zama deployment)
+ *  Role: Encrypted balances, homomorphic strategy evaluation, Gateway reveals.
+ *  Contracts: ConfidentialToken.sol | ConfidentialStrategyAgent.sol
+ *  Status: ✅  Contracts defined and compiled; require fhEVM precompile deployment.
+ *
+ *  Layer 3 — BRIDGE / RELAYER (TODO)
+ *  ───────────────────────────────────
+ *  Connects Base deposits to Zama computation.
+ *  Options: LayerZero, Hyperlane, custom oracle + relayer.
+ *  Status: ❌  NOT IMPLEMENTED — architecture placeholder only.
+ *
+ *  TECHNICAL HONESTY:
+ *  Zama fhEVM precompiles do NOT exist on Base or Base Sepolia (OP Stack).
+ *  All TFHE operations run on Zama's network. The bridge is future work.
+ * ═══════════════════════════════════════════════════════════════════════
  */
 
-// ── Chain IDs ────────────────────────────────────────────────────────────────
+// ── Layer 1: Settlement chain IDs (Base) ─────────────────────────────────────
+
+export type BaseChainId = 8453 | 84532;
+
+export const BASE_CHAIN_IDS: BaseChainId[] = [8453, 84532];
+
+export const BASE_NETWORK_NAMES: Record<BaseChainId, string> = {
+  8453:  "Base",
+  84532: "Base Sepolia",
+};
+
+/**
+ * BaseVault contract addresses on Base (settlement layer).
+ * TODO: Deploy BaseVault.sol on Base Sepolia and Base mainnet.
+ *       These are zero-address placeholders until deployment.
+ */
+export const BASE_VAULT_ADDRESSES: Record<BaseChainId, `0x${string}`> = {
+  8453:  (process.env.NEXT_PUBLIC_BASE_VAULT_ADDRESS_BASE   || "0x0000000000000000000000000000000000000000") as `0x${string}`,
+  84532: (process.env.NEXT_PUBLIC_BASE_VAULT_ADDRESS_BASE_SEPOLIA || "0x0000000000000000000000000000000000000000") as `0x${string}`,
+};
+
+export const BASE_RPC_URLS: Record<BaseChainId, string> = {
+  8453:  process.env.NEXT_PUBLIC_BASE_RPC_URL         ?? "https://mainnet.base.org",
+  84532: process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org",
+};
+
+export const BASE_EXPLORER_URLS: Record<BaseChainId, string> = {
+  8453:  "https://basescan.org",
+  84532: "https://sepolia.basescan.org",
+};
+
+// ── Layer 2: Computation chain IDs (Zama fhEVM) ──────────────────────────────
 
 export type SupportedChainId = 9000 | 11155111;
 
 /**
- * Zama Devnet (chain ID 9000) is the primary fhEVM testnet.
- * Ethereum Sepolia (11155111) requires Zama's fhEVM precompiles to be live there
- * before the ConfidentialToken will work.
+ * fhEVM computation chains.
+ * Zama Devnet (chain 9000) = primary fhEVM testnet with real precompiles.
+ * Ethereum Sepolia (11155111) = Zama has deployed fhEVM precompiles here too.
  */
 export const SUPPORTED_CHAIN_IDS: SupportedChainId[] = [9000, 11155111];
 
 export const NETWORK_NAMES: Record<SupportedChainId, string> = {
-  9000: "Zama Devnet",
+  9000:     "Zama Devnet",
   11155111: "Sepolia",
 };
 
 export const CONTRACT_ADDRESSES: Record<SupportedChainId, `0x${string}`> = {
-  9000: (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_ZAMA_DEVNET ||
-    "0x0000000000000000000000000000000000000000") as `0x${string}`,
-  11155111: (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_SEPOLIA ||
-    "0x0000000000000000000000000000000000000000") as `0x${string}`,
+  9000:     (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_ZAMA_DEVNET || "0x0000000000000000000000000000000000000000") as `0x${string}`,
+  11155111: (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_SEPOLIA     || "0x0000000000000000000000000000000000000000") as `0x${string}`,
 };
 
 export const STRATEGY_AGENT_ADDRESSES: Record<SupportedChainId, `0x${string}`> = {
-  9000: (process.env.NEXT_PUBLIC_STRATEGY_AGENT_ADDRESS_ZAMA_DEVNET ||
-    "0x0000000000000000000000000000000000000000") as `0x${string}`,
-  11155111: (process.env.NEXT_PUBLIC_STRATEGY_AGENT_ADDRESS_SEPOLIA ||
-    "0x0000000000000000000000000000000000000000") as `0x${string}`,
+  9000:     (process.env.NEXT_PUBLIC_STRATEGY_AGENT_ADDRESS_ZAMA_DEVNET || "0x0000000000000000000000000000000000000000") as `0x${string}`,
+  11155111: (process.env.NEXT_PUBLIC_STRATEGY_AGENT_ADDRESS_SEPOLIA     || "0x0000000000000000000000000000000000000000") as `0x${string}`,
 };
 
-// ── fhEVM RPC endpoints ──────────────────────────────────────────────────────
+// ── fhEVM RPC & Gateway ───────────────────────────────────────────────────────
 
 export const FHEVM_RPC_URLS: Record<SupportedChainId, string> = {
-  9000: process.env.NEXT_PUBLIC_ZAMA_DEVNET_RPC ?? "https://devnet.zama.ai",
-  11155111:
-    process.env.NEXT_PUBLIC_RPC_URL_SEPOLIA ??
-    "https://rpc.sepolia.org",
+  9000:     process.env.NEXT_PUBLIC_ZAMA_DEVNET_RPC  ?? "https://devnet.zama.ai",
+  11155111: process.env.NEXT_PUBLIC_RPC_URL_SEPOLIA  ?? "https://rpc.sepolia.org",
 };
 
 export const GATEWAY_URL = "https://gateway.zama.ai";
+
+// ── Explorer helpers (all chains) ────────────────────────────────────────────
 
 // ── ABI ──────────────────────────────────────────────────────────────────────
 //

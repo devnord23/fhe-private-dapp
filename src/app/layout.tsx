@@ -6,23 +6,26 @@ import { MobileNav } from "@/components/layout/MobileNav";
 
 export const metadata: Metadata = {
   title: {
-    default: "ConfidentialFi – Private Token Transfers",
+    default: "ConfidentialFi — Private Agentic DeFi on Base",
     template: "%s | ConfidentialFi",
   },
   description:
-    "Transfer ERC-20 tokens confidentially using zero-knowledge proofs. Shield your balance and send privately on Ethereum.",
-  keywords: ["defi", "privacy", "zk proof", "confidential transfer", "ethereum", "web3"],
+    "Private Agentic DeFi on Base — confidential token transfers and encrypted strategy execution powered by Zama fhEVM. Built for Base, computed with Fully Homomorphic Encryption.",
+  keywords: [
+    "base", "base sepolia", "defi", "privacy", "fhe", "fhevm", "zama",
+    "confidential transfer", "encrypted strategy", "web3",
+  ],
   metadataBase: new URL("https://confidentialfi.vercel.app"),
   openGraph: {
     type: "website",
-    title: "ConfidentialFi",
-    description: "Private token transfers powered by zero-knowledge proofs",
+    title: "ConfidentialFi — Private Agentic DeFi on Base",
+    description: "Built for Base. Powered by Zama fhEVM. Encrypted DeFi strategy execution.",
     siteName: "ConfidentialFi",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ConfidentialFi",
-    description: "Private token transfers powered by zero-knowledge proofs",
+    title: "ConfidentialFi — Private Agentic DeFi on Base",
+    description: "Built for Base. Powered by Zama fhEVM.",
   },
 };
 

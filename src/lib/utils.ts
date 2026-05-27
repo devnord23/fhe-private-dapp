@@ -78,12 +78,41 @@ export function getExplorerUrl(
   value: string
 ): string {
   const explorers: Record<number, string> = {
-    1: "https://etherscan.io",
+    1:        "https://etherscan.io",
     11155111: "https://sepolia.etherscan.io",
-    8453: "https://basescan.org",
-    84532: "https://sepolia.basescan.org",
-    9000: "https://main.explorer.zama.ai",
+    8453:     "https://basescan.org",         // Base mainnet
+    84532:    "https://sepolia.basescan.org", // Base Sepolia
+    9000:     "https://main.explorer.zama.ai", // Zama Devnet
   };
   const base = explorers[chainId] ?? "https://etherscan.io";
   return `${base}/${type}/${value}`;
+}
+
+/**
+ * Returns the canonical explorer name for a given chain.
+ */
+export function getExplorerName(chainId: number): string {
+  const names: Record<number, string> = {
+    1:        "Etherscan",
+    11155111: "Sepolia Etherscan",
+    8453:     "Basescan",
+    84532:    "Basescan (Sepolia)",
+    9000:     "Zama Explorer",
+  };
+  return names[chainId] ?? "Block Explorer";
+}
+
+/**
+ * Returns true if the given chain is a Base chain (settlement layer).
+ * Base chains do NOT have Zama fhEVM precompiles.
+ */
+export function isBaseChain(chainId: number): boolean {
+  return chainId === 8453 || chainId === 84532;
+}
+
+/**
+ * Returns true if the given chain supports Zama fhEVM operations.
+ */
+export function isFhevmChain(chainId: number): boolean {
+  return chainId === 9000 || chainId === 11155111;
 }

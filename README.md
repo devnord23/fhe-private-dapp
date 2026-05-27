@@ -1,6 +1,10 @@
-# ConfidentialFi – Zama fhEVM Confidential Transfer DApp
+# ConfidentialFi — Private Agentic DeFi on Base
 
-A full-stack Web3 application for confidential token transfers using Zama's **Fully Homomorphic Encryption** (fhEVM).  Built with Next.js 15, TypeScript, Tailwind CSS, RainbowKit, wagmi, and viem.
+**Built for Base. Powered by Zama fhEVM.**
+
+A full-stack Web3 application for private token transfers and encrypted DeFi strategy execution. Base Sepolia is the default wallet and settlement chain. Zama fhEVM handles all confidential computation.
+
+Built with Next.js 15, TypeScript, Tailwind CSS, RainbowKit, wagmi, viem, and fhevmjs.
 
 ---
 
@@ -232,6 +236,160 @@ const plainBalance = await fhevmInstance.reencrypt(
 );
 
 console.log('Balance:', plainBalance); // bigint
+```
+
+---
+
+## Three-Layer Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  LAYER 1 — SETTLEMENT                                    │
+│  Base Sepolia (chain 84532) / Base (chain 8453)         │
+│                                                          │
+│  ✅ Implemented:                                         │
+│    • Default wallet connection (RainbowKit)             │
+│    • Explorer links → sepolia.basescan.org              │
+│    • ENV vars: BASE_RPC_URL, BASE_VAULT_ADDRESS_*       │
+│    • ChainBadge in navbar ("Settlement Layer")          │
+│                                                          │
+│  🔧 TODO:                                                │
+│    • BaseVault.sol — lock tokens before bridging        │
+│    • Deposit/withdrawal UI for Base-native assets       │
+│    • Coinbase Smart Wallet integration                  │
+└───────────────────┬─────────────────────────────────────┘
+                    │ Bridge / Relayer ← NOT IMPLEMENTED
+                    │ (LayerZero / Hyperlane / custom)
+┌───────────────────▼─────────────────────────────────────┐
+│  LAYER 2 — CONFIDENTIAL COMPUTE                         │
+│  Zama fhEVM (chain 9000 / Sepolia)                     │
+│                                                          │
+│  ✅ Implemented:                                         │
+│    • ConfidentialToken.sol (TFHE.sol, euint64)          │
+│    • ConfidentialStrategyAgent.sol (5 encrypted params) │
+│    • fhevmjs batch encryption (single proof, 5 inputs)  │
+│    • Gateway.requestDecryption callback pattern         │
+│    • TFHE.lt / TFHE.add / TFHE.select homomorphic ops  │
+│                                                          │
+│  🔧 TODO:                                                │
+│    • Deploy contracts to Zama Devnet / Sepolia          │
+│    • Re-encryption balance display (EIP-712 + reencrypt)│
+│    • ERC-20 approval step before shield()               │
+└───────────────────┬─────────────────────────────────────┘
+                    │ Oracle / Feed ← Simulated
+┌───────────────────▼─────────────────────────────────────┐
+│  LAYER 3 — AGENT / ORACLE                               │
+│  Off-chain (browser simulation)                         │
+│                                                          │
+│  ✅ Implemented (simulated):                             │
+│    • APY feed — random walk                             │
+│    • Health factor feed — random walk                   │
+│    • Local evaluation estimate                          │
+│                                                          │
+│  🔧 TODO:                                                │
+│    • Chainlink price feed adapter                       │
+│    • Aave health factor oracle                          │
+│    • Automated keeper / cron execution                  │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Base Deployment Reality Check
+
+> This section explains honestly what works on Base today and what requires future work.
+
+### ✅ What works on Base Sepolia right now
+
+| Feature | Status |
+|---|---|
+| Wallet connection on Base Sepolia | Works — RainbowKit lists Base Sepolia as default |
+| Base Sepolia Basescan explorer links | Works — `https://sepolia.basescan.org` |
+| Base-first wagmi chain ordering | Works — Base Sepolia is chain[0] |
+| "Built for Base" / "Powered by Zama fhEVM" branding | Works |
+
+### ❌ What does NOT yet work on Base
+
+| Feature | Reason | Path to fix |
+|---|---|---|
+| `ConfidentialToken.shield()` | Zama TFHE precompiles do NOT exist on Base or Base Sepolia (OP Stack) | Deploy on Zama network; add bridge |
+| `ConfidentialStrategyAgent.createStrategy()` | Same — fhEVM is a separate network | Deploy on Zama network |
+| Confidential balance display | Requires fhevmjs connected to Zama RPC | Bridge + fhevmjs on Zama side |
+| Cross-chain settlement flow | Bridge not implemented | See TODO list below |
+
+### Why Zama fhEVM can't run natively on Base
+
+Base is an **OP Stack** L2. It uses the standard EVM with Optimism's modifications. It does not include Zama's TFHE executor precompile (deployed at a specific address on Zama's network only). This is not a limitation of Base — it is simply that fhEVM is a separate network with additional cryptographic infrastructure.
+
+Possible future paths:
+1. **EVM equivalence route**: Zama deploys their precompile system on Base via a validator extension — possible but requires coordination with Base/Optimism.
+2. **Coprocessor route**: A trusted off-chain coprocessor (like Zama's own) processes FHE operations and posts results back to Base — reduces trust assumptions but adds latency.
+3. **Cross-chain route** (current design): User deposits on Base, bridge relays to Zama network for FHE computation, results settle back on Base.
+
+---
+
+## Base Integration TODO List
+
+Complete roadmap to make this a fully functional Base-first application:
+
+### Immediate (contracts)
+
+- [ ] **Deploy BaseVault.sol on Base Sepolia**
+  - Lock ERC-20 tokens on Base when user initiates shield
+  - Emit `DepositInitiated(amount, destinationChainId, recipient)` event
+  - Contract address → `NEXT_PUBLIC_BASE_VAULT_ADDRESS_BASE_SEPOLIA`
+
+### Bridge / Relayer
+
+- [ ] **Connect Base deposits to fhEVM computation layer**
+  - Listen for `DepositInitiated` events on Base
+  - Relay deposit message to Zama Sepolia (or Devnet)
+  - Call `ConfidentialToken.shield(amount)` on Zama side
+  - Protocol candidates: [LayerZero OFT](https://layerzero.network/), [Hyperlane](https://hyperlane.xyz/), [Wormhole](https://wormhole.com/)
+
+- [ ] **Add relayer service**
+  - Off-chain service that monitors Base events
+  - Signs and submits cross-chain messages
+  - Handles retries, gas, and failure recovery
+
+- [ ] **Add bridge/message passing**
+  - On-chain contracts on both sides to verify cross-chain messages
+  - Handle finality differences (Base ~2s, Zama ~varies)
+
+### Settlement
+
+- [ ] **Test Base settlement flow end-to-end**
+  - User shields on Base → funds bridged → shielded on Zama
+  - User unshields on Zama → Gateway decrypts → bridged back → released on Base
+  - Full round-trip test on testnets before any mainnet consideration
+
+### UX
+
+- [ ] **Deploy Base Vault contract** and update `NEXT_PUBLIC_BASE_VAULT_ADDRESS_BASE_SEPOLIA`
+- [ ] **Add network switching prompt** when user is on Base but tries fhEVM operation
+- [ ] **Show pending cross-chain transactions** in history with two-chain status
+
+---
+
+## Quick Start (Base Sepolia)
+
+```bash
+# 1. Install and configure
+npm install
+cp .env.example .env.local
+
+# 2. Add to .env.local (Base Sepolia = wallet default, no further setup needed)
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
+# Base RPC is public — no API key required for devnet:
+NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
+
+# 3. Run
+npm run dev   # Wallet defaults to Base Sepolia
+
+# 4. For fhEVM encrypted operations, also set:
+NEXT_PUBLIC_CONTRACT_ADDRESS_ZAMA_DEVNET=<after deploy:zamaDevnet>
+NEXT_PUBLIC_FHEVM_ACL_ADDRESS=<from docs.zama.ai>
+NEXT_PUBLIC_FHEVM_KMS_ADDRESS=<from docs.zama.ai>
 ```
 
 ---

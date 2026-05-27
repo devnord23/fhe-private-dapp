@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ConnectButton } from "@/components/wallet/ConnectButton";
+import { ChainBadge } from "@/components/wallet/ChainBadge";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
@@ -36,9 +37,14 @@ export function Navbar() {
                 />
               </svg>
             </div>
-            <span className="hidden sm:block text-base font-bold text-white tracking-tight">
-              ConfidentialFi
-            </span>
+            <div className="hidden sm:flex flex-col">
+              <span className="text-sm font-bold text-white tracking-tight leading-none">
+                ConfidentialFi
+              </span>
+              <span className="text-[9px] text-gray-500 leading-none mt-0.5">
+                Built for Base · Powered by Zama fhEVM
+              </span>
+            </div>
           </Link>
 
           {/* Desktop nav */}
@@ -60,7 +66,8 @@ export function Navbar() {
           </nav>
 
           {/* Right side */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <ChainBadge />
             <ConnectButton />
           </div>
         </div>

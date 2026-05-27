@@ -11,7 +11,7 @@ export default function TransferPage() {
     <div className="animate-fade-in space-y-6">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-3 mb-1">
+        <div className="flex items-center gap-3 mb-1 flex-wrap">
           <h1 className="text-2xl font-bold text-white">Confidential Transfer</h1>
           <span className="px-2.5 py-0.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-xs text-brand-400 font-medium">
             ZK-Powered
@@ -80,17 +80,19 @@ export default function TransferPage() {
         <svg className="h-5 w-5 text-yellow-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
-        <div className="text-xs text-yellow-400/80 space-y-1">
+        <div className="text-xs text-yellow-400/80 space-y-1.5">
           <p>
-            <strong className="text-yellow-400">Zama Devnet only.</strong> The ConfidentialToken
-            contract must be deployed on Zama Devnet (chain ID 9000) for fhEVM features to work.
-            Do not send real funds on testnet.
+            <strong className="text-yellow-400">Two-chain system.</strong> Your wallet defaults to{" "}
+            <strong className="text-yellow-400">Base Sepolia</strong> (the settlement layer).
+            Encrypted transfers use the{" "}
+            <strong className="text-yellow-400">Zama fhEVM network</strong> (chain 9000 or Sepolia)
+            where TFHE precompiles live. The bridge between them is TODO. Do not send real funds.
           </p>
           <p>
-            <strong className="text-yellow-400">No fake proofs.</strong> This app does not
-            simulate ZK proofs or Pedersen commitments. Transfer encryption is real — performed by
-            fhevmjs using the network&apos;s actual FHE public key. Balance decryption via
-            re-encryption is not yet wired in the UI (marked TODO).
+            <strong className="text-yellow-400">No fake proofs.</strong> Transfer encryption is
+            real — performed by fhevmjs using the network&apos;s actual FHE public key.
+            Balance decryption (re-encryption) is not yet wired in the UI (marked TODO).
+            Zama fhEVM precompiles do NOT run on Base or Base Sepolia natively.
           </p>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { BalanceCard } from "@/components/dashboard/BalanceCard";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { NetworkStats } from "@/components/dashboard/NetworkStats";
+import { BaseArchitecture } from "@/components/architecture/BaseArchitecture";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -37,9 +38,17 @@ export default function DashboardPage() {
     <div className="animate-fade-in space-y-8">
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+        <div className="flex items-center gap-3 mb-1 flex-wrap">
+          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 font-medium">
+            Built for Base
+          </span>
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 font-medium">
+            Powered by Zama fhEVM
+          </span>
+        </div>
         <p className="mt-1 text-sm text-gray-400">
-          Overview of your confidential token activity and balances
+          Private Agentic DeFi on Base — confidential balances and encrypted strategy execution
         </p>
       </div>
 
@@ -111,6 +120,13 @@ export default function DashboardPage() {
             icon: "🔑",
             tag: "Partial",
           },
+          {
+            title: "Base Settlement Layer",
+            description:
+              "Base Sepolia is the default wallet chain and future home of the BaseVault settlement contract. The bridge from Base to Zama fhEVM is a planned future work item.",
+            icon: "🔵",
+            tag: "Planned",
+          },
         ].map((feature) => (
           <div
             key={feature.title}
@@ -121,6 +137,8 @@ export default function DashboardPage() {
               <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border
                 ${feature.tag === "Real"
                   ? "bg-brand-500/10 text-brand-400 border-brand-500/20"
+                  : feature.tag === "Planned"
+                  ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
                   : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"}`}>
                 {feature.tag}
               </span>
@@ -130,6 +148,9 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* System architecture */}
+      <BaseArchitecture compact={false} />
     </div>
   );
 }

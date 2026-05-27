@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { StrategyForm } from "@/components/strategy/StrategyForm";
 import { AgentDashboard } from "@/components/strategy/AgentDashboard";
 import { SecurityNote } from "@/components/strategy/SecurityNote";
+import { BaseArchitecture } from "@/components/architecture/BaseArchitecture";
 
 export const metadata: Metadata = {
   title: "Confidential Strategy Agent",
@@ -14,17 +15,20 @@ export default function StrategyPage() {
       <div>
         <div className="flex items-center gap-3 mb-1 flex-wrap">
           <h1 className="text-2xl font-bold text-white">Confidential Strategy Agent</h1>
+          <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400 font-medium">
+            Built for Base
+          </span>
           <span className="px-2.5 py-0.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-xs text-brand-400 font-medium">
-            Phase 2
+            Powered by Zama fhEVM
           </span>
           <span className="px-2.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-xs text-orange-400 font-medium">
             Feeds Simulated
           </span>
         </div>
         <p className="text-sm text-gray-400 max-w-2xl">
-          Configure DeFi strategy parameters encrypted on-chain via Zama fhEVM. An autonomous
-          agent evaluates conditions homomorphically — without seeing your thresholds. Use the
-          dashboard to trigger evaluations and request Gateway reveals.
+          Private Agentic DeFi on Base — configure strategy parameters encrypted on Zama fhEVM.
+          An autonomous agent evaluates encrypted conditions homomorphically. Base Sepolia is the
+          user-facing chain; Zama fhEVM is the confidential compute layer.
         </p>
       </div>
 
@@ -68,6 +72,9 @@ export default function StrategyPage() {
           <AgentDashboard />
         </div>
       </div>
+
+      {/* Architecture diagram (compact on this page) */}
+      <BaseArchitecture compact />
     </div>
   );
 }
