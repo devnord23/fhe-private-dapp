@@ -76,8 +76,8 @@ pragma solidity ^0.8.24;
  *      ▼                   ▼
  *  released to user     back to available balance
  *
- *  Emergency path (owner only, for testnet/dev):
- *      emergencyWithdraw() — bypasses pending state, transfers directly
+ *  Emergency path (any user, for their own available balance — testnet/dev):
+ *      emergencyWithdraw() — bypasses relayer, transfers directly to msg.sender
  */
 
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
