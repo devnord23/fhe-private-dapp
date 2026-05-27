@@ -30,10 +30,14 @@ export type { IERC165 } from "./@openzeppelin/contracts/utils/introspection/IERC
 export { IERC165__factory } from "./factories/@openzeppelin/contracts/utils/introspection/IERC165__factory";
 export type { ReentrancyGuard } from "./@openzeppelin/contracts/utils/ReentrancyGuard";
 export { ReentrancyGuard__factory } from "./factories/@openzeppelin/contracts/utils/ReentrancyGuard__factory";
+export type { BaseVault } from "./contracts/BaseVault";
+export { BaseVault__factory } from "./factories/contracts/BaseVault__factory";
 export type { ConfidentialStrategyAgent } from "./contracts/ConfidentialStrategyAgent";
 export { ConfidentialStrategyAgent__factory } from "./factories/contracts/ConfidentialStrategyAgent__factory";
 export type { ConfidentialToken } from "./contracts/ConfidentialToken";
 export { ConfidentialToken__factory } from "./factories/contracts/ConfidentialToken__factory";
+export type { IRelayer } from "./contracts/IRelayer";
+export { IRelayer__factory } from "./factories/contracts/IRelayer__factory";
 export type { MockERC20 } from "./contracts/MockERC20";
 export { MockERC20__factory } from "./factories/contracts/MockERC20__factory";
 export type { EthereumZamaFHEVMConfig } from "./fhevm/config/ZamaFHEVMConfig.sol/EthereumZamaFHEVMConfig";

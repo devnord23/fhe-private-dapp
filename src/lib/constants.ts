@@ -491,3 +491,202 @@ export const STRATEGY_AGENT_ABI = [
     ],
   },
 ] as const;
+
+// ── BaseVault ABI ─────────────────────────────────────────────────────────────
+//
+// Matches contracts/contracts/BaseVault.sol exactly.
+// Deployed on Base Sepolia (84532) or Base mainnet (8453).
+// NO TFHE or FHE operations — pure ERC-20 settlement layer.
+
+export const BASE_VAULT_ABI = [
+  // ── Read ──────────────────────────────────────────────────────────────────
+  {
+    type: "function", name: "owner",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function", name: "relayer",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function", name: "getAvailableBalance",
+    stateMutability: "view",
+    inputs: [
+      { name: "user",  type: "address" },
+      { name: "token", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function", name: "getPendingWithdrawal",
+    stateMutability: "view",
+    inputs: [
+      { name: "user",  type: "address" },
+      { name: "token", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function", name: "getLinkedStrategy",
+    stateMutability: "view",
+    inputs: [{ name: "user", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function", name: "vaultBalance",
+    stateMutability: "view",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+
+  // ── Write ─────────────────────────────────────────────────────────────────
+  {
+    type: "function", name: "deposit",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "token",      type: "address" },
+      { name: "amount",     type: "uint256" },
+      { name: "strategyId", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function", name: "linkStrategy",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "strategyId", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    type: "function", name: "requestWithdrawal",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "token",  type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function", name: "cancelPendingWithdrawal",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "token",  type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function", name: "emergencyWithdraw",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [],
+  },
+  {
+    type: "function", name: "setRelayer",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "_relayer", type: "address" }],
+    outputs: [],
+  },
+  // relayerCompleteWithdrawal — callable only by relayer/owner
+  {
+    type: "function", name: "relayerCompleteWithdrawal",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "user",   type: "address" },
+      { name: "token",  type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+
+  // ── Events ────────────────────────────────────────────────────────────────
+  {
+    type: "event", name: "DepositCreated",
+    inputs: [
+      { name: "user",       type: "address", indexed: true  },
+      { name: "token",      type: "address", indexed: true  },
+      { name: "amount",     type: "uint256", indexed: false },
+      { name: "strategyId", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event", name: "WithdrawalRequested",
+    inputs: [
+      { name: "user",   type: "address", indexed: true  },
+      { name: "token",  type: "address", indexed: true  },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event", name: "WithdrawalCompleted",
+    inputs: [
+      { name: "user",   type: "address", indexed: true  },
+      { name: "token",  type: "address", indexed: true  },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event", name: "WithdrawalCancelled",
+    inputs: [
+      { name: "user",   type: "address", indexed: true  },
+      { name: "token",  type: "address", indexed: true  },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event", name: "StrategyLinked",
+    inputs: [
+      { name: "user",       type: "address", indexed: true  },
+      { name: "strategyId", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event", name: "RelayerSet",
+    inputs: [{ name: "relayer", type: "address", indexed: true }],
+  },
+] as const;
+
+// ── Minimal ERC-20 ABI (approve + balanceOf + decimals) ───────────────────────
+// Used by the vault deposit flow to approve BaseVault before calling deposit().
+
+export const ERC20_APPROVE_ABI = [
+  {
+    type: "function", name: "approve",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount",  type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function", name: "allowance",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner",   type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function", name: "balanceOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function", name: "decimals",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint8" }],
+  },
+  {
+    type: "function", name: "symbol",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "string" }],
+  },
+] as const;

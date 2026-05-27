@@ -853,6 +853,82 @@
       "artifacts": [
         "ConfidentialStrategyAgent"
       ]
+    },
+    "/workspace/contracts/contracts/BaseVault.sol": {
+      "lastModificationDate": 1779891701717,
+      "contentHash": "445516db4eb5134e353ae91bee56303f",
+      "sourceName": "contracts/BaseVault.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 500
+          },
+          "evmVersion": "cancun",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol",
+        "@openzeppelin/contracts/access/Ownable.sol",
+        "@openzeppelin/contracts/utils/ReentrancyGuard.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "BaseVault"
+      ]
+    },
+    "/workspace/contracts/contracts/IRelayer.sol": {
+      "lastModificationDate": 1779891632217,
+      "contentHash": "e607a65d9efe65311123455874d2fd9c",
+      "sourceName": "contracts/IRelayer.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 500
+          },
+          "evmVersion": "cancun",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "IRelayer"
+      ]
     }
   }
 }

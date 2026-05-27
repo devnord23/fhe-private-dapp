@@ -240,6 +240,70 @@ console.log('Balance:', plainBalance); // bigint
 
 ---
 
+## BaseVault → Relayer → Zama fhEVM Flow
+
+```
+DEPOSIT FLOW
+─────────────────────────────────────────────────────────────────────
+User (Base Sepolia wallet)
+  │
+  │ 1. token.approve(BaseVault, amount)
+  │ 2. BaseVault.deposit(token, amount, strategyId)
+  ▼
+BaseVault.sol  (Base Sepolia — chain 84532)
+  • Locks ERC-20 tokens on Base
+  • Emits DepositCreated(user, token, amount, strategyId)
+  │
+  │ Off-chain relayer watches for DepositCreated event  ← TODO
+  ▼
+Relayer Service  (TODO — off-chain Node.js / keeper)
+  • Reads DepositCreated from Base Sepolia
+  • Builds fhevmjs encrypted input for amount
+  • Calls ConfidentialToken.shield(amount) on Zama fhEVM
+  │
+  ▼
+ConfidentialToken.sol  (Zama fhEVM — chain 9000 or Sepolia)
+  • Mints encrypted euint64 balance for user
+  • TFHE.allow() grants user ACL access
+  • User can now do encrypted transfers and strategy evaluation
+
+
+WITHDRAWAL FLOW
+─────────────────────────────────────────────────────────────────────
+User requests withdrawal
+  │ BaseVault.requestWithdrawal(token, amount)
+  │ → Emits WithdrawalRequested, locks funds in _pending
+  │
+  │ Relayer watches WithdrawalRequested  ← TODO
+  ▼
+Relayer Service  (TODO)
+  • Encrypts amount via fhevmjs
+  • Calls ConfidentialToken.requestUnshield(encAmt, proof, relayer)
+  • Waits for Zama Gateway callbackUnshield (ERC-20 on Zama released)
+  │
+  │ Relayer calls back on Base
+  ▼
+BaseVault.relayerCompleteWithdrawal(user, token, amount)
+  • Releases ERC-20 to user on Base Sepolia
+  • Emits WithdrawalCompleted
+```
+
+See `contracts/contracts/IRelayer.sol` for the full interface specification.
+
+### What BaseVault protects vs what it doesn't
+
+| Claim | Reality |
+|---|---|
+| ERC-20 funds are safely held on Base | ✅ True — contract inherits ReentrancyGuard, SafeERC20 |
+| Deposit amounts are private | ❌ False — `DepositCreated` emits the amount publicly |
+| Strategy IDs are private | ❌ False — `StrategyLinked` emits the ID publicly |
+| Withdrawal requests are private | ❌ False — `WithdrawalRequested` emits the amount |
+| Funds can be recovered without relayer | ✅ True — `emergencyWithdraw()` and `cancelPendingWithdrawal()` |
+
+The privacy of amounts and strategy parameters is provided by Zama fhEVM after bridging, not by BaseVault itself. BaseVault is a transparent settlement contract.
+
+---
+
 ## Three-Layer Architecture
 
 ```
@@ -334,10 +398,12 @@ Complete roadmap to make this a fully functional Base-first application:
 
 ### Immediate (contracts)
 
+- [x] **BaseVault.sol written and tested** (50 tests passing)
+  - Deposits, withdrawals, strategy linking, relayer auth
+  - See `contracts/contracts/BaseVault.sol`
 - [ ] **Deploy BaseVault.sol on Base Sepolia**
-  - Lock ERC-20 tokens on Base when user initiates shield
-  - Emit `DepositInitiated(amount, destinationChainId, recipient)` event
-  - Contract address → `NEXT_PUBLIC_BASE_VAULT_ADDRESS_BASE_SEPOLIA`
+  - Run `cd contracts && npm run deploy:vault:baseSepolia`
+  - Copy address → `NEXT_PUBLIC_BASE_VAULT_ADDRESS_BASE_SEPOLIA`
 
 ### Bridge / Relayer
 

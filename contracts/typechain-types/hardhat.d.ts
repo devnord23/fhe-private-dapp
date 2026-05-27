@@ -58,6 +58,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ReentrancyGuard__factory>;
     getContractFactory(
+      name: "BaseVault",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.BaseVault__factory>;
+    getContractFactory(
       name: "ConfidentialStrategyAgent",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ConfidentialStrategyAgent__factory>;
@@ -65,6 +69,10 @@ declare module "hardhat/types/runtime" {
       name: "ConfidentialToken",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ConfidentialToken__factory>;
+    getContractFactory(
+      name: "IRelayer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IRelayer__factory>;
     getContractFactory(
       name: "MockERC20",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -158,6 +166,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.ReentrancyGuard>;
     getContractAt(
+      name: "BaseVault",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.BaseVault>;
+    getContractAt(
       name: "ConfidentialStrategyAgent",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -167,6 +180,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.ConfidentialToken>;
+    getContractAt(
+      name: "IRelayer",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IRelayer>;
     getContractAt(
       name: "MockERC20",
       address: string | ethers.Addressable,
@@ -258,6 +276,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ReentrancyGuard>;
     deployContract(
+      name: "BaseVault",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.BaseVault>;
+    deployContract(
       name: "ConfidentialStrategyAgent",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ConfidentialStrategyAgent>;
@@ -265,6 +287,10 @@ declare module "hardhat/types/runtime" {
       name: "ConfidentialToken",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ConfidentialToken>;
+    deployContract(
+      name: "IRelayer",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IRelayer>;
     deployContract(
       name: "MockERC20",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -358,6 +384,11 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ReentrancyGuard>;
     deployContract(
+      name: "BaseVault",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.BaseVault>;
+    deployContract(
       name: "ConfidentialStrategyAgent",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -367,6 +398,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ConfidentialToken>;
+    deployContract(
+      name: "IRelayer",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IRelayer>;
     deployContract(
       name: "MockERC20",
       args: any[],

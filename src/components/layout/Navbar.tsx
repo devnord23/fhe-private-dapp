@@ -8,9 +8,10 @@ import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/transfer", label: "Transfer" },
-  { href: "/history", label: "History" },
-  { href: "/strategy", label: "Agent" },
+  { href: "/vault",     label: "Vault" },
+  { href: "/transfer",  label: "Transfer" },
+  { href: "/history",   label: "History" },
+  { href: "/strategy",  label: "Agent" },
 ];
 
 export function Navbar() {

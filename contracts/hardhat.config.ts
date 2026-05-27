@@ -5,58 +5,74 @@ import dotenv from "dotenv";
 dotenv.config();
 
 /**
- * Hardhat configuration for ConfidentialToken.
+ * Hardhat configuration for the full three-layer stack.
  *
- * NOTE: The fhEVM Hardhat mock plugin (previously `fhevm/hardhat`) does NOT exist
- * in fhevm@0.6.x.  A separate plugin ecosystem (@fhevm/hardhat-plugin v0.4+) exists
- * for fhEVM v2 (@fhevm/solidity), but it is not compatible with the Solidity library
- * version used here (fhevm@0.6.2 / TFHE.sol).
+ * Layer 1 — Base (settlement):
+ *   baseSepolia : Base Sepolia testnet (chain 84532) — primary testnet
+ *   base        : Base mainnet (chain 8453)
  *
- * As a result:
- *  - Local Hardhat tests can compile and run the contract but TFHE precompile
- *    calls will behave as calls to empty addresses (see test comments).
- *  - Full end-to-end FHE tests must run on Zama Devnet (chainId 9000) or
- *    Ethereum Sepolia with Zama's fhEVM precompiles deployed.
+ * Layer 2 — Zama fhEVM (confidential compute):
+ *   zamaDevnet  : Zama Devnet (chain 9000) — fhEVM with real precompiles
+ *   sepolia     : Ethereum Sepolia (chain 11155111) — Zama also deploys here
  *
- * Supported networks:
- *   hardhat      – local; Solidity compiles, basic unit tests pass, TFHE ops are stubs
- *   zamaDevnet   – Zama Devnet (real fhEVM, real encrypted operations)
- *   sepolia      – Ethereum Sepolia (requires Zama precompiles deployed there)
+ * Local:
+ *   hardhat     : Standard Hardhat local node (no fhEVM precompiles)
+ *                 Suitable for BaseVault.sol tests (no TFHE calls).
+ *                 NOT suitable for ConfidentialToken / ConfidentialStrategyAgent
+ *                 without the fhEVM mock (which requires v2 SDK).
+ *
+ * NOTES:
+ *  • BaseVault.sol does NOT use TFHE — all its tests run on local Hardhat.
+ *  • ConfidentialToken / ConfidentialStrategyAgent require Zama precompiles.
+ *    Run those tests with FHEVM_NETWORK=zamaDevnet after live deployment.
  */
 
-const PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY ?? "";
-const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY ?? "";
+const PRIVATE_KEY     = process.env.DEPLOYER_PRIVATE_KEY ?? "";
+const ETHERSCAN_KEY   = process.env.ETHERSCAN_API_KEY    ?? "";
+const BASESCAN_KEY    = process.env.BASESCAN_API_KEY     ?? "";
 
 const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.24",
     settings: {
-      optimizer: {
-        enabled: true,
-        runs: 500,
-      },
-      // cancun is required for EIP-1153 transient storage used by TFHE.allowTransient
+      optimizer: { enabled: true, runs: 500 },
+      // cancun required for EIP-1153 transient storage used by TFHE.allowTransient
       evmVersion: "cancun",
     },
   },
 
   networks: {
+    // ── Local ──────────────────────────────────────────────────────────────
     hardhat: {
-      // No fhEVM precompiles here. TFHE calls silently succeed or fail
-      // depending on how Solidity handles calls to empty addresses.
-      // Use only for compilation checks and input-validation tests.
+      // No fhEVM precompiles. BaseVault tests run here; TFHE tests skip.
     },
 
+    // ── Base (Layer 1 — Settlement) ──────────────────────────────────────
+    baseSepolia: {
+      url: process.env.BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org",
+      chainId: 84532,
+      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+      gasPrice: "auto",
+    },
+    base: {
+      url: process.env.BASE_RPC_URL ?? "https://mainnet.base.org",
+      chainId: 8453,
+      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+      gasPrice: "auto",
+    },
+
+    // ── Zama fhEVM (Layer 2 — Confidential Compute) ──────────────────────
     zamaDevnet: {
       url: process.env.ZAMA_DEVNET_RPC ?? "https://devnet.zama.ai",
       chainId: 9000,
       accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+      gasPrice: "auto",
     },
-
     sepolia: {
       url: process.env.SEPOLIA_RPC_URL ?? "https://rpc.sepolia.org",
       chainId: 11155111,
       accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+      gasPrice: "auto",
     },
   },
 
@@ -67,8 +83,28 @@ const config: HardhatUserConfig = {
 
   etherscan: {
     apiKey: {
-      sepolia: ETHERSCAN_API_KEY,
+      sepolia:     ETHERSCAN_KEY,
+      baseSepolia: BASESCAN_KEY,
+      base:        BASESCAN_KEY,
     },
+    customChains: [
+      {
+        network: "baseSepolia",
+        chainId: 84532,
+        urls: {
+          apiURL:     "https://api-sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org",
+        },
+      },
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL:     "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
+        },
+      },
+    ],
   },
 
   gasReporter: {
