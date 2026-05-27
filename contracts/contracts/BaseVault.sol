@@ -188,9 +188,18 @@ contract BaseVault is Ownable, ReentrancyGuard {
 
     // ── Modifiers ─────────────────────────────────────────────────────────────
 
+    /**
+     * @dev Security fix (SECURITY.md finding 1.4):
+     *      Owner fallback removed. Only the designated `relayer` address may
+     *      call relayerCompleteWithdrawal(). In production the relayer address
+     *      should be a bridge contract with on-chain proof verification, not an EOA.
+     *
+     *      To perform admin withdrawals during development, set the relayer to
+     *      the deployer address via setRelayer() before deployment.
+     */
     modifier onlyRelayer() {
         require(
-            msg.sender == relayer || msg.sender == owner(),
+            msg.sender == relayer,
             "BaseVault: caller is not the relayer"
         );
         _;
@@ -249,8 +258,17 @@ contract BaseVault is Ownable, ReentrancyGuard {
         require(token != address(0), "BaseVault: zero token address");
         require(amount > 0, "BaseVault: amount must be > 0");
 
+        // ── Security fix (SECURITY.md finding 1.1): fee-on-transfer tokens ───────
+        // Measure the actual tokens received rather than trusting `amount`.
+        // For standard ERC-20 tokens `received == amount`; for tokens with a
+        // transfer fee `received < amount`. Using `received` ensures the vault's
+        // internal accounting never exceeds its real token balance.
+        uint256 balanceBefore = IERC20(token).balanceOf(address(this));
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-        _available[msg.sender][token] += amount;
+        uint256 received = IERC20(token).balanceOf(address(this)) - balanceBefore;
+        require(received > 0, "BaseVault: received zero tokens");
+
+        _available[msg.sender][token] += received;
 
         // Auto-link strategy if provided and not yet linked
         if (strategyId != 0 && _linkedStrategy[msg.sender] == 0) {
@@ -258,7 +276,8 @@ contract BaseVault is Ownable, ReentrancyGuard {
             emit StrategyLinked(msg.sender, strategyId);
         }
 
-        emit DepositCreated(msg.sender, token, amount, strategyId);
+        // Emit `received` (not `amount`) so downstream systems know the exact credit
+        emit DepositCreated(msg.sender, token, received, strategyId);
     }
 
     // ── Strategy Linking ──────────────────────────────────────────────────────

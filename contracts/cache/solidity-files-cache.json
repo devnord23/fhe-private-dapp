@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/workspace/contracts/contracts/ConfidentialToken.sol": {
-      "lastModificationDate": 1779888015371,
-      "contentHash": "421d8b648ff2675a651ca31a513ce740",
+      "lastModificationDate": 1779895044391,
+      "contentHash": "4665be1569e4a3c8c1bbd7932413828e",
       "sourceName": "contracts/ConfidentialToken.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -855,8 +855,8 @@
       ]
     },
     "/workspace/contracts/contracts/BaseVault.sol": {
-      "lastModificationDate": 1779894388465,
-      "contentHash": "fc99546709a70f066277aadf57b18890",
+      "lastModificationDate": 1779895068707,
+      "contentHash": "0a6d9580f4ab9a167b0ea40b6c7e9a46",
       "sourceName": "contracts/BaseVault.sol",
       "solcConfig": {
         "version": "0.8.24",

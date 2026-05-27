@@ -218,6 +218,18 @@ export const CONFIDENTIAL_TOKEN_ABI = [
     outputs: [{ name: "", type: "bool" }],
   },
 
+  // ── Write: recoverExpiredUnshield (security fix 2.1) ─────────────────────
+  //
+  // Callable by the original sender after the Gateway maxTimestamp has passed
+  // without callbackUnshield firing. Re-credits the encrypted amount.
+  {
+    type: "function",
+    name: "recoverExpiredUnshield",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "requestId", type: "uint256" }],
+    outputs: [],
+  },
+
   // ── Write: requestUnshield (two-step via Gateway) ─────────────────────────
   //
   // REAL fhEVM function. Encrypted amount is provided the same way as transfer().
@@ -271,6 +283,16 @@ export const CONFIDENTIAL_TOKEN_ABI = [
       { name: "from", type: "address", indexed: true },
       { name: "to", type: "address", indexed: true },
       // No amount field – this is intentional. Amount stays encrypted.
+    ],
+  },
+  // Emitted by recoverExpiredUnshield (security fix 2.1)
+  {
+    type: "event",
+    name: "UnshieldRecovered",
+    inputs: [
+      { name: "sender",    type: "address", indexed: true  },
+      { name: "requestId", type: "uint256", indexed: true  },
+      // No amount — balance remains encrypted after recovery.
     ],
   },
 ] as const;

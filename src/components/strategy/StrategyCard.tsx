@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { ConfirmModal, useConfirmModal } from "@/components/ui/ConfirmModal";
 import { useStrategyMetadata, useStrategyActions } from "@/hooks/useStrategy";
 import { useEvaluateStrategy } from "@/hooks/useStrategy";
 import { formatRelativeTime, shortenAddress } from "@/lib/utils";
@@ -46,6 +47,11 @@ export function StrategyCard({ strategyId, feed, localParams }: StrategyCardProp
   const [expanded, setExpanded] = useState(false);
   const [lastEvalTx, setLastEvalTx] = useState<string | null>(null);
 
+  // ── Reveal confirmation modal (security fix: UI finding 3.2) ────────────────
+  // requestEvaluationReveal permanently exposes the evaluation outcome on-chain.
+  // The user must type "CONFIRM" before the transaction is submitted.
+  const revealConfirm = useConfirmModal();
+
   const estimate = localEstimate(feed, localParams);
 
   async function handleEvaluate() {
@@ -60,7 +66,8 @@ export function StrategyCard({ strategyId, feed, localParams }: StrategyCardProp
     }
   }
 
-  async function handleReveal() {
+  async function handleRevealConfirmed() {
+    revealConfirm.close();
     await requestEvalReveal(strategyId);
   }
 
@@ -140,7 +147,7 @@ export function StrategyCard({ strategyId, feed, localParams }: StrategyCardProp
         <Button
           variant="outline"
           size="sm"
-          onClick={handleReveal}
+          onClick={revealConfirm.open}
           isLoading={revealPending}
           disabled={evalNever || !metadata.isActive}
         >
@@ -163,6 +170,24 @@ export function StrategyCard({ strategyId, feed, localParams }: StrategyCardProp
         <p>Created: {new Date(Number(metadata.createdAt) * 1000).toLocaleString()}</p>
         <p>Last evaluated: {evalNever ? "Never" : formatRelativeTime(Number(metadata.lastEvaluatedAt) * 1000)}</p>
       </div>
+
+      {/* Reveal confirmation modal */}
+      <ConfirmModal
+        isOpen={revealConfirm.isOpen}
+        title="Reveal Evaluation Result?"
+        description={`Strategy #${strategyId.toString()} — last evaluation outcome`}
+        warning={
+          "This action is PERMANENT and IRREVERSIBLE.\n\n" +
+          "Once confirmed, whether your strategy conditions were triggered will be " +
+          "permanently visible to ALL blockchain observers in the EvaluationRevealed " +
+          "event log. It cannot be undone, deleted, or hidden."
+        }
+        confirmKeyword="CONFIRM"
+        confirmLabel="Reveal Permanently"
+        onConfirm={handleRevealConfirmed}
+        onCancel={revealConfirm.close}
+        isLoading={revealPending}
+      />
 
       {/* Encrypted handles (expanded view) */}
       {expanded && (

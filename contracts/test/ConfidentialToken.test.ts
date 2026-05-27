@@ -164,6 +164,18 @@ describe("ConfidentialToken", function () {
     });
   });
 
+  // ── recoverExpiredUnshield() – input validation (no TFHE required) ────────
+
+  describe("recoverExpiredUnshield() – input validation (security fix 2.1)", function () {
+    it("reverts for an unknown requestId (no pending unshield exists)", async function () {
+      // No pending unshield → sender field is zero address → revert expected.
+      // This test exercises the guard before any TFHE precompile is called.
+      await expect(
+        ct.connect(alice).recoverExpiredUnshield(99999n)
+      ).to.be.revertedWith("ConfidentialToken: unknown requestId");
+    });
+  });
+
   // ── rescueTokens() ─────────────────────────────────────────────────────────
 
   describe("rescueTokens()", function () {
@@ -245,6 +257,18 @@ describe("ConfidentialToken", function () {
 
     it("requestUnshield() reduces balance and triggers Gateway callback", async function () {
       this.skip(); // Requires Gateway deployment on the target network.
+    });
+
+    it("recoverExpiredUnshield() restores balance after Gateway timeout (security fix 2.1)", async function () {
+      // Full test requires:
+      //   1. alice.shield(500) → creates encrypted balance
+      //   2. alice.requestUnshield(encAmount, proof, bob.address)
+      //      → balance deducted, pendingUnshields[requestId] stored with maxTimestamp
+      //   3. Advance block.timestamp past maxTimestamp (1 hour)
+      //   4. alice.recoverExpiredUnshield(requestId)
+      //      → balance restored, UnshieldRecovered event emitted
+      //   5. Re-encrypt alice's balance → should be back to 500
+      this.skip(); // Requires fhEVM precompiles + time manipulation on Zama Devnet.
     });
   });
 });

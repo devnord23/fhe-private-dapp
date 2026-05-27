@@ -99,10 +99,22 @@ export async function handleWithdrawalRequested(
 }
 
 /**
- * Check all pending withdrawals and complete those that have waited long enough.
+ * Check all pending withdrawals and complete those that are ready.
  *
- * TESTNET BEHAVIOR: Auto-completes after delay without Zama verification.
- * PRODUCTION TODO:  Only complete when a matching Zama Unshielded event is found.
+ * ╔══════════════════════════════════════════════════════════════════════╗
+ * ║  SECURITY: TESTNET_ONLY_AUTO_COMPLETE guard                         ║
+ * ║                                                                      ║
+ * ║  Auto-completing withdrawals WITHOUT verifying the Zama-side         ║
+ * ║  Unshielded event creates a DOUBLE-SPEND:                            ║
+ * ║    user withdraws on Base AND retains shielded balance on Zama.      ║
+ * ║                                                                      ║
+ * ║  Default: DISABLED (TESTNET_ONLY_AUTO_COMPLETE is not set).          ║
+ * ║  Enable only on testnets where tokens have no real value.            ║
+ * ║                                                                      ║
+ * ║  Production path (TODO): Listen for Zama ConfidentialToken.          ║
+ * ║  Unshielded(sender, recipient=relayerAddress, amount) event and      ║
+ * ║  only then call relayerCompleteWithdrawal() on Base.                 ║
+ * ╚══════════════════════════════════════════════════════════════════════╝
  */
 export async function processPendingWithdrawals(
   currentBlock: bigint,
@@ -110,6 +122,29 @@ export async function processPendingWithdrawals(
 ): Promise<void> {
   const pending = state.getWithdrawalsByStatus("pending");
   if (pending.length === 0) return;
+
+  // ── Auto-complete guard ────────────────────────────────────────────────────
+
+  if (!Config.relayer.testnetOnlyAutoComplete) {
+    if (pending.length > 0) {
+      logger.info(
+        "[processPending] Auto-complete is DISABLED (TESTNET_ONLY_AUTO_COMPLETE not set). " +
+          `${pending.length} withdrawal(s) pending. ` +
+          "TODO (production): implement Zama Unshielded event verification to complete these.",
+        { pendingCount: pending.length }
+      );
+    }
+    return;
+  }
+
+  // ── Testnet-only auto-complete path (double-spend risk — use only on testnet) ─
+
+  logger.warn(
+    "⚠️  [processPending] TESTNET_ONLY_AUTO_COMPLETE=true. " +
+      "Auto-completing withdrawals WITHOUT Zama verification. " +
+      "NEVER use in production — this creates a double-spend vulnerability.",
+    { pendingCount: pending.length }
+  );
 
   logger.debug("[processPending] Checking pending withdrawals", { count: pending.length });
 
@@ -126,15 +161,19 @@ export async function processPendingWithdrawals(
       continue;
     }
 
-    // TODO (production): Verify Zama Unshielded event here before proceeding.
-    // For testnet MVP, we auto-complete after delay.
     logger.warn(
-      "[processPending] TODO: Should verify Zama Unshielded event before completing. " +
-        "Auto-completing for testnet MVP.",
+      "[processPending] Auto-completing (testnet only). " +
+        "TODO: Verify Zama Unshielded event before completing in production.",
       { user: w.user, amount: w.amount }
     );
 
-    await completeWithdrawal(w.user, w.token as `0x${string}`, BigInt(w.amount), w.requestTxHash as `0x${string}`, state);
+    await completeWithdrawal(
+      w.user,
+      w.token as `0x${string}`,
+      BigInt(w.amount),
+      w.requestTxHash as `0x${string}`,
+      state
+    );
   }
 }
 

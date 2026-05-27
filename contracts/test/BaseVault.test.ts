@@ -305,10 +305,14 @@ describe("BaseVault", function () {
       expect(await vault.getPendingWithdrawal(alice.address, await tokenAddr())).to.equal(0n);
     });
 
-    it("owner can also complete withdrawal (owner acts as relayer in dev)", async function () {
-      const before = await token.balanceOf(alice.address);
-      await vault.connect(owner).relayerCompleteWithdrawal(alice.address, await tokenAddr(), withdrawAmt);
-      expect(await token.balanceOf(alice.address)).to.equal(before + withdrawAmt);
+    it("owner CANNOT complete withdrawal (owner fallback removed — security fix 1.4)", async function () {
+      // After removing the `|| msg.sender == owner()` fallback from onlyRelayer,
+      // only the designated relayer address is authorised.
+      // The owner must set themselves as the relayer explicitly (via setRelayer)
+      // to perform completions during development.
+      await expect(
+        vault.connect(owner).relayerCompleteWithdrawal(alice.address, await tokenAddr(), withdrawAmt)
+      ).to.be.revertedWith("BaseVault: caller is not the relayer");
     });
 
     it("emits WithdrawalCompleted event", async function () {
@@ -425,6 +429,28 @@ describe("BaseVault", function () {
       // Only available (700) is withdrawn; pending (300) stays locked
       expect(await token.balanceOf(alice.address)).to.equal(before + u(700));
       expect(await vault.getPendingWithdrawal(alice.address, await tokenAddr())).to.equal(u(300));
+    });
+  });
+
+  // ── deposit() – fee-on-transfer accounting (security fix 1.1) ────────────
+
+  describe("deposit() – fee-on-transfer accounting", function () {
+    it("credits the RECEIVED amount, not the input amount (standard token: same value)", async function () {
+      // For standard ERC-20 tokens received == amount, so the balance
+      // must equal exactly what was passed to deposit().
+      const tokenAddr = await token.getAddress();
+      await token.connect(alice).approve(await vault.getAddress(), u(300));
+      await vault.connect(alice).deposit(tokenAddr, u(300), 0);
+      expect(await vault.getAvailableBalance(alice.address, tokenAddr)).to.equal(u(300));
+    });
+
+    it("emits DepositCreated with the received amount", async function () {
+      const tokenAddr = await token.getAddress();
+      await token.connect(alice).approve(await vault.getAddress(), u(100));
+      // For standard tokens received == amount; event must show the actual credit
+      await expect(vault.connect(alice).deposit(tokenAddr, u(100), 0))
+        .to.emit(vault, "DepositCreated")
+        .withArgs(alice.address, tokenAddr, u(100), 0);
     });
   });
 

@@ -14,6 +14,7 @@ import { join }                                          from "node:path";
 import { StateManager }                                  from "../src/state.js";
 import { handleStrategyLinked }                          from "../src/handlers/strategyLinked.js";
 import { handleDepositCreated }                          from "../src/handlers/depositCreated.js";
+import { processPendingWithdrawals }                     from "../src/handlers/withdrawalRequested.js";
 
 const TEST_STATE_PATH = join(process.cwd(), "tests/.test-state.json");
 
@@ -169,6 +170,42 @@ describe("addPendingWithdrawal idempotency", () => {
 
     const pending = state.getWithdrawalsByStatus("pending");
     expect(pending).toHaveLength(1);
+  });
+});
+
+// ── Auto-complete guard (security fix 4.1) ────────────────────────────────────
+
+describe("processPendingWithdrawals – auto-complete guard", () => {
+  it("does NOT auto-complete when TESTNET_ONLY_AUTO_COMPLETE is unset (safe default)", async () => {
+    // The guard should bail out early when the env flag is not 'true'.
+    // This test verifies the default-off behavior by checking that pending
+    // withdrawals remain pending after calling processPendingWithdrawals.
+    const state = freshState();
+
+    state.addPendingWithdrawal({
+      user:          ALICE,
+      token:         TOKEN,
+      amount:        "100",
+      requestTxHash: TX1,
+      requestBlock:  1,      // old block — would pass delay check if auto-complete ran
+      requestedAt:   Date.now() - 60_000,
+      status:        "pending",
+    });
+
+    // Ensure TESTNET_ONLY_AUTO_COMPLETE is not set
+    const original = process.env.TESTNET_ONLY_AUTO_COMPLETE;
+    delete process.env.TESTNET_ONLY_AUTO_COMPLETE;
+
+    // processsPendingWithdrawals should return without calling completeWithdrawal
+    // (which would fail without a real RPC anyway)
+    await processPendingWithdrawals(BigInt(1000), state);
+
+    process.env.TESTNET_ONLY_AUTO_COMPLETE = original;
+
+    // Withdrawal is still pending — no attempt was made to complete it
+    const still = state.getWithdrawalsByStatus("pending");
+    expect(still).toHaveLength(1);
+    expect(still[0].status).toBe("pending");
   });
 });
 

@@ -32,6 +32,7 @@ export interface ConfidentialTokenInterface extends Interface {
       | "name"
       | "owner"
       | "pendingUnshields"
+      | "recoverExpiredUnshield"
       | "renounceOwnership"
       | "requestUnshield"
       | "rescueTokens"
@@ -47,6 +48,7 @@ export interface ConfidentialTokenInterface extends Interface {
       | "OwnershipTransferred"
       | "Shielded"
       | "Transfer"
+      | "UnshieldRecovered"
       | "UnshieldRequested"
       | "Unshielded"
   ): EventFragment;
@@ -67,6 +69,10 @@ export interface ConfidentialTokenInterface extends Interface {
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "pendingUnshields",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "recoverExpiredUnshield",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -115,6 +121,10 @@ export interface ConfidentialTokenInterface extends Interface {
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "pendingUnshields",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "recoverExpiredUnshield",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -171,6 +181,19 @@ export namespace TransferEvent {
   export interface OutputObject {
     from: string;
     to: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace UnshieldRecoveredEvent {
+  export type InputTuple = [sender: AddressLike, requestId: BigNumberish];
+  export type OutputTuple = [sender: string, requestId: bigint];
+  export interface OutputObject {
+    sender: string;
+    requestId: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -281,8 +304,21 @@ export interface ConfidentialToken extends BaseContract {
 
   pendingUnshields: TypedContractMethod<
     [arg0: BigNumberish],
-    [[string, string] & { sender: string; recipient: string }],
+    [
+      [string, string, bigint, bigint] & {
+        sender: string;
+        recipient: string;
+        amount: bigint;
+        maxTimestamp: bigint;
+      }
+    ],
     "view"
+  >;
+
+  recoverExpiredUnshield: TypedContractMethod<
+    [requestId: BigNumberish],
+    [void],
+    "nonpayable"
   >;
 
   renounceOwnership: TypedContractMethod<[], [void], "nonpayable">;
@@ -344,9 +380,19 @@ export interface ConfidentialToken extends BaseContract {
     nameOrSignature: "pendingUnshields"
   ): TypedContractMethod<
     [arg0: BigNumberish],
-    [[string, string] & { sender: string; recipient: string }],
+    [
+      [string, string, bigint, bigint] & {
+        sender: string;
+        recipient: string;
+        amount: bigint;
+        maxTimestamp: bigint;
+      }
+    ],
     "view"
   >;
+  getFunction(
+    nameOrSignature: "recoverExpiredUnshield"
+  ): TypedContractMethod<[requestId: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "renounceOwnership"
   ): TypedContractMethod<[], [void], "nonpayable">;
@@ -406,6 +452,13 @@ export interface ConfidentialToken extends BaseContract {
     TransferEvent.OutputObject
   >;
   getEvent(
+    key: "UnshieldRecovered"
+  ): TypedContractEvent<
+    UnshieldRecoveredEvent.InputTuple,
+    UnshieldRecoveredEvent.OutputTuple,
+    UnshieldRecoveredEvent.OutputObject
+  >;
+  getEvent(
     key: "UnshieldRequested"
   ): TypedContractEvent<
     UnshieldRequestedEvent.InputTuple,
@@ -452,6 +505,17 @@ export interface ConfidentialToken extends BaseContract {
       TransferEvent.InputTuple,
       TransferEvent.OutputTuple,
       TransferEvent.OutputObject
+    >;
+
+    "UnshieldRecovered(address,uint256)": TypedContractEvent<
+      UnshieldRecoveredEvent.InputTuple,
+      UnshieldRecoveredEvent.OutputTuple,
+      UnshieldRecoveredEvent.OutputObject
+    >;
+    UnshieldRecovered: TypedContractEvent<
+      UnshieldRecoveredEvent.InputTuple,
+      UnshieldRecoveredEvent.OutputTuple,
+      UnshieldRecoveredEvent.OutputObject
     >;
 
     "UnshieldRequested(address,address,uint256)": TypedContractEvent<

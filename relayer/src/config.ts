@@ -63,11 +63,17 @@ export const Config = {
     pollingIntervalMs:          optionalInt("POLLING_INTERVAL_MS", 12_000),
     confirmationBlocks:         optionalInt("CONFIRMATION_BLOCKS", 2),
     /**
-     * TESTNET ONLY: auto-complete withdrawals after this many blocks
-     * without verifying the Zama-side unshield.
+     * Security fix (SECURITY.md finding 4.1 — CRITICAL):
+     * Auto-complete without Zama verification is a double-spend.
      *
-     * TODO (production): Replace with actual Zama Unshielded event verification.
+     * Default: false (disabled — safe for production).
+     * Set TESTNET_ONLY_AUTO_COMPLETE=true ONLY on testnets with no real-value tokens.
+     *
+     * When disabled, WithdrawalRequested events are recorded but completions
+     * are NOT triggered automatically. The relayer waits for Zama-side
+     * Unshielded event verification (TODO: implement that path).
      */
+    testnetOnlyAutoComplete: process.env.TESTNET_ONLY_AUTO_COMPLETE === "true",
     withdrawalAutoCompleteDelayBlocks: optionalInt("WITHDRAWAL_AUTO_COMPLETE_DELAY_BLOCKS", 10),
   },
 

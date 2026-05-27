@@ -65,9 +65,18 @@ contract ConfidentialToken is
 
     // ── Pending unshields ──────────────────────────────────────────────────────
 
+    /**
+     * @dev Fields added for Gateway timeout recovery (SECURITY fix):
+     *      `amount`       – the encrypted amount deducted from sender's balance.
+     *                       Stored so it can be returned if the Gateway never fires.
+     *      `maxTimestamp` – the deadline passed to Gateway.requestDecryption().
+     *                       After this timestamp the sender may call recoverExpiredUnshield().
+     */
     struct PendingUnshield {
         address sender;
         address recipient;
+        euint64 amount;        // for recovery: re-credit sender if Gateway times out
+        uint256 maxTimestamp;  // for recovery: eligibility check
     }
     mapping(uint256 => PendingUnshield) public pendingUnshields;
 
@@ -89,6 +98,13 @@ contract ConfidentialToken is
         address indexed recipient,
         uint64 amount
     );
+
+    /**
+     * @notice Emitted when an expired unshield request is recovered.
+     * @dev    This restores the encrypted balance to the original sender.
+     *         No amount is logged (balance remains encrypted).
+     */
+    event UnshieldRecovered(address indexed sender, uint256 indexed requestId);
 
     /**
      * @notice Confidential transfer occurred.
@@ -259,23 +275,33 @@ contract ConfidentialToken is
         TFHE.allow(_encryptedTotalShielded, address(this));
         TFHE.allow(_encryptedTotalShielded, owner());
 
-        // Grant Gateway transient ACL access to decrypt `actualAmount`.
+        // Grant persistent ACL so the contract can access `actualAmount` in recovery,
+        // and grant sender access so they can re-encrypt it if needed.
+        TFHE.allow(actualAmount, address(this));
+        TFHE.allow(actualAmount, msg.sender);
+
+        // Grant Gateway transient ACL to decrypt `actualAmount` for the callback.
         TFHE.allowTransient(actualAmount, Gateway.gatewayContractAddress());
 
         uint256[] memory handles = new uint256[](1);
         handles[0] = Gateway.toUint256(actualAmount);
 
+        // Store maxTimestamp so the sender can recover if the Gateway never calls back.
+        uint256 maxTs = block.timestamp + 1 hours;
+
         uint256 requestId = Gateway.requestDecryption(
             handles,
             this.callbackUnshield.selector,
             0,
-            block.timestamp + 1 hours,
+            maxTs,
             false // passSignaturesToCaller
         );
 
         pendingUnshields[requestId] = PendingUnshield({
-            sender: msg.sender,
-            recipient: recipient
+            sender:       msg.sender,
+            recipient:    recipient,
+            amount:       actualAmount,
+            maxTimestamp: maxTs
         });
 
         emit UnshieldRequested(msg.sender, recipient, requestId);
@@ -301,6 +327,75 @@ contract ConfidentialToken is
         }
 
         emit Unshielded(pending.sender, pending.recipient, decryptedAmount);
+    }
+
+    // ── Unshield Recovery ──────────────────────────────────────────────────────
+
+    /**
+     * @notice Recover a shielded balance from an unshield request that the
+     *         Zama Gateway never resolved (Gateway timeout / outage).
+     *
+     * @dev    Security fix for SECURITY.md finding 2.1:
+     *         "Gateway timeout: Unshielded Funds May Be Permanently Lost"
+     *
+     *         The sender's balance was already deducted when requestUnshield() was
+     *         called (to prevent double-spend). If the Gateway never fires
+     *         callbackUnshield() within the maxTimestamp window, the encrypted
+     *         amount is re-credited to the sender here.
+     *
+     *         Only callable by the ORIGINAL SENDER after maxTimestamp has passed.
+     *         Anyone else calling will revert.
+     *
+     *         Note: if callbackUnshield() already fired (succeeded), the
+     *         pendingUnshields entry is deleted and this function reverts with
+     *         "unknown requestId" — preventing double-recovery.
+     *
+     * @param requestId  The request ID returned by requestUnshield().
+     */
+    function recoverExpiredUnshield(uint256 requestId) external nonReentrant {
+        PendingUnshield memory pending = pendingUnshields[requestId];
+        require(
+            pending.sender != address(0),
+            "ConfidentialToken: unknown requestId"
+        );
+        require(
+            msg.sender == pending.sender,
+            "ConfidentialToken: not the original sender"
+        );
+        require(
+            block.timestamp > pending.maxTimestamp,
+            "ConfidentialToken: unshield request not yet expired"
+        );
+
+        // Delete first (checks-effects-interactions)
+        delete pendingUnshields[requestId];
+
+        // Re-add the encrypted amount to the sender's balance
+        if (!TFHE.isInitialized(_encryptedBalances[pending.sender])) {
+            _encryptedBalances[pending.sender] = pending.amount;
+        } else {
+            _encryptedBalances[pending.sender] = TFHE.add(
+                _encryptedBalances[pending.sender],
+                pending.amount
+            );
+        }
+        TFHE.allow(_encryptedBalances[pending.sender], address(this));
+        TFHE.allow(_encryptedBalances[pending.sender], pending.sender);
+
+        // Restore the total shielded counter
+        if (!TFHE.isInitialized(_encryptedTotalShielded)) {
+            _encryptedTotalShielded = pending.amount;
+        } else {
+            _encryptedTotalShielded = TFHE.add(
+                _encryptedTotalShielded,
+                pending.amount
+            );
+        }
+        TFHE.allow(_encryptedTotalShielded, address(this));
+        TFHE.allow(_encryptedTotalShielded, owner());
+
+        // No amount in the event – balance remains encrypted
+        emit UnshieldRecovered(pending.sender, requestId);
     }
 
     // ── Read ───────────────────────────────────────────────────────────────────
