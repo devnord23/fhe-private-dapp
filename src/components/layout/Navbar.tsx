@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ConnectButton } from "@/components/wallet/ConnectButton";
 import { ChainBadge } from "@/components/wallet/ChainBadge";
 import { cn } from "@/lib/utils";
+import { isDemoMode } from "@/lib/contracts";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
@@ -39,9 +40,16 @@ export function Navbar() {
               </svg>
             </div>
             <div className="hidden sm:flex flex-col">
-              <span className="text-sm font-bold text-white tracking-tight leading-none">
-                ConfidentialFi
-              </span>
+              <div className="flex items-center gap-2 leading-none">
+                <span className="text-sm font-bold text-white tracking-tight">
+                  ConfidentialFi
+                </span>
+                {isDemoMode() && (
+                  <span className="rounded-full bg-yellow-500/15 border border-yellow-500/25 px-1.5 py-0.5 text-[9px] font-bold text-yellow-400 uppercase tracking-wide">
+                    Demo
+                  </span>
+                )}
+              </div>
               <span className="text-[9px] text-gray-500 leading-none mt-0.5">
                 Built for Base · Powered by Zama fhEVM
               </span>

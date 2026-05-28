@@ -5,6 +5,8 @@ import { useAccount, useChainId } from "wagmi";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
+import { NotDeployedCard } from "@/components/ui/DemoModeBanner";
+import { useContractConfig } from "@/hooks/useContractConfig";
 import { useDeposit, useWithdrawal, parseVaultAmount, useVaultBalance } from "@/hooks/useBaseVault";
 import { isBaseChain } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -22,7 +24,10 @@ export function VaultDeposit({ onSuccess }: VaultDepositProps) {
   const { isConnected } = useAccount();
   const chainId = useChainId();
   const onBase = isBaseChain(chainId);
+  const { vault: vaultConfigured } = useContractConfig();
 
+  // All hooks must be called unconditionally (Rules of Hooks).
+  // We gate the JSX render on vaultConfigured after all hooks.
   const [tab, setTab] = useState<Tab>("deposit");
   const [tokenAddr, setTokenAddr] = useState("");
   const [amount, setAmount] = useState("");
@@ -81,6 +86,15 @@ export function VaultDeposit({ onSuccess }: VaultDepositProps) {
   }
 
   const depositIsPending = step === "approving" || step === "depositing";
+
+  if (!vaultConfigured) {
+    return (
+      <NotDeployedCard
+        contractName="BaseVault"
+        description="Deploy BaseVault on Base Sepolia to enable ERC-20 deposits and withdrawals."
+      />
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-surface-400/50 bg-surface-700 overflow-hidden">

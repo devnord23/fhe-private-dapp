@@ -6,9 +6,12 @@ import { StrategyCard } from "./StrategyCard";
 import { useAgentFeeds } from "@/hooks/useAgentFeeds";
 import { useOwnerStrategies } from "@/hooks/useStrategy";
 import { Badge } from "@/components/ui/Badge";
+import { NotDeployedCard } from "@/components/ui/DemoModeBanner";
+import { useContractConfig } from "@/hooks/useContractConfig";
 
 export function AgentDashboard() {
   const { isConnected } = useAccount();
+  const { strategyAgent: agentConfigured } = useContractConfig();
   const { feed, isPaused, pause, resume, forceTick } = useAgentFeeds();
   const { strategyIds, isLoading } = useOwnerStrategies();
 
@@ -90,7 +93,12 @@ export function AgentDashboard() {
           )}
         </div>
 
-        {!isConnected ? (
+        {!agentConfigured ? (
+          <NotDeployedCard
+            contractName="ConfidentialStrategyAgent"
+            description="Deploy to Ethereum Sepolia to view and manage encrypted strategies."
+          />
+        ) : !isConnected ? (
           <div className="rounded-2xl border border-surface-400/40 bg-surface-700/50 p-8 text-center">
             <p className="text-sm text-gray-400">Connect your wallet to view strategies</p>
           </div>

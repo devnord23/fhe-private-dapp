@@ -5,6 +5,8 @@ import { useAccount } from "wagmi";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
+import { NotDeployedCard } from "@/components/ui/DemoModeBanner";
+import { useContractConfig } from "@/hooks/useContractConfig";
 import { useCreateStrategy, type StrategyParams } from "@/hooks/useStrategy";
 import { PARAM_LABELS, bpsToPercent, healthX100ToHF } from "@/lib/agent";
 
@@ -22,9 +24,19 @@ interface StrategyFormProps {
 
 export function StrategyForm({ onCreated }: StrategyFormProps) {
   const { isConnected } = useAccount();
+  const { strategyAgent: agentConfigured } = useContractConfig();
   const { createStrategy, isPending, fhevmReady, error, clearError } = useCreateStrategy();
   const [params, setParams] = useState<StrategyParams>(DEFAULTS);
   const [success, setSuccess] = useState<string | null>(null);
+
+  if (!agentConfigured) {
+    return (
+      <NotDeployedCard
+        contractName="ConfidentialStrategyAgent"
+        description="Deploy ConfidentialStrategyAgent on Ethereum Sepolia to create and evaluate encrypted strategies."
+      />
+    );
+  }
 
   function setField(key: keyof StrategyParams, raw: string) {
     clearError();

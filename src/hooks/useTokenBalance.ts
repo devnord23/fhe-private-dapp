@@ -28,6 +28,7 @@
 
 import { useAccount, useChainId, useReadContract } from "wagmi";
 import { CONFIDENTIAL_TOKEN_ABI, CONTRACT_ADDRESSES, type SupportedChainId } from "@/lib/constants";
+import { isContractConfigured } from "@/lib/contracts";
 
 export interface EncryptedBalanceHandle {
   /** The raw euint64 handle (uint256 value returned by the contract). */
@@ -57,6 +58,8 @@ export function useTokenBalance(): TokenBalanceResult {
   const contractAddress =
     CONTRACT_ADDRESSES[chainId] ?? CONTRACT_ADDRESSES[9000];
 
+  const contractConfigured = isContractConfigured(contractAddress);
+
   const {
     data: rawHandle,
     isLoading,
@@ -67,7 +70,8 @@ export function useTokenBalance(): TokenBalanceResult {
     functionName: "encryptedBalanceOf",
     args: address ? [address] : undefined,
     query: {
-      enabled: isConnected && !!address,
+      // Skip the RPC call entirely when the contract is not deployed (zero address)
+      enabled: isConnected && !!address && contractConfigured,
     },
   });
 

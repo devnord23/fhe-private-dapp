@@ -33,6 +33,7 @@ import {
   type SupportedChainId,
 } from "@/lib/constants";
 import { useFhevm } from "./useFhevm";
+import { isContractConfigured } from "@/lib/contracts";
 
 export interface StrategyParams {
   /** Target APY in basis points, e.g. 800 = 8.00% */
@@ -319,13 +320,15 @@ export function useStrategyActions() {
 export function useOwnerStrategies() {
   const { address, isConnected } = useAccount();
   const contractAddress = useContractAddress();
+  const agentConfigured = isContractConfigured(contractAddress);
 
   const { data, isLoading, refetch } = useReadContract({
     address: contractAddress,
     abi: STRATEGY_AGENT_ABI,
     functionName: "getOwnerStrategies",
     args: address ? [address] : undefined,
-    query: { enabled: isConnected && !!address, refetchInterval: 15_000 },
+    // Skip RPC call when contract is not deployed
+    query: { enabled: isConnected && !!address && agentConfigured, refetchInterval: 15_000 },
   });
 
   return {

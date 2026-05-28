@@ -6,10 +6,23 @@ import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { Button } from "@/components/ui/Button";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { shortenAddress } from "@/lib/utils";
+import { useContractConfig } from "@/hooks/useContractConfig";
 
 export function BalanceCard() {
   const { address, isConnected } = useAccount();
+  const { confidentialToken: ctConfigured } = useContractConfig();
   const { encryptedBalance, isLoading } = useTokenBalance();
+
+  if (!ctConfigured) {
+    return (
+      <div className="rounded-2xl border border-yellow-500/15 bg-yellow-500/5 p-6 text-center min-h-[180px] flex flex-col items-center justify-center gap-3">
+        <p className="text-sm font-semibold text-white">ConfidentialToken not deployed</p>
+        <p className="text-xs text-gray-400 max-w-xs">
+          Deploy to Ethereum Sepolia to display encrypted balance handles.
+        </p>
+      </div>
+    );
+  }
 
   if (!isConnected) {
     return (

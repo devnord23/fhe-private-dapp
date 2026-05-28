@@ -32,6 +32,7 @@ import {
   type BaseChainId,
 } from "@/lib/constants";
 import { isBaseChain } from "@/lib/utils";
+import { isContractConfigured } from "@/lib/contracts";
 import { parseUnits, formatUnits } from "viem";
 
 function useVaultAddress() {
@@ -227,7 +228,9 @@ export interface VaultBalanceResult {
 export function useVaultBalance(tokenAddress: `0x${string}` | null): VaultBalanceResult {
   const { address, isConnected } = useAccount();
   const vaultAddress = useVaultAddress();
-  const enabled = isConnected && !!address && !!tokenAddress;
+  // Skip all RPC calls when vault is not deployed (zero address)
+  const vaultConfigured = isContractConfigured(vaultAddress);
+  const enabled = isConnected && !!address && !!tokenAddress && vaultConfigured;
 
   const { data: available, isLoading: l1, refetch: r1 } = useReadContract({
     address: vaultAddress,

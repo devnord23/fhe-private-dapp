@@ -6,6 +6,8 @@ import { useConfidentialTransfer } from "@/hooks/useConfidentialTransfer";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
+import { NotDeployedCard } from "@/components/ui/DemoModeBanner";
+import { useContractConfig } from "@/hooks/useContractConfig";
 import { cn, isValidAddress, isValidAmount } from "@/lib/utils";
 
 type Tab = "confidential" | "shield" | "unshield";
@@ -40,6 +42,7 @@ const INITIAL_FORM: FormState = { recipient: "", amount: "" };
 
 export function TransferForm() {
   const { isConnected } = useAccount();
+  const { confidentialToken: ctConfigured } = useContractConfig();
   const [tab, setTab] = useState<Tab>("confidential");
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [success, setSuccess] = useState<string | null>(null);
@@ -53,6 +56,15 @@ export function TransferForm() {
     error,
     clearError,
   } = useConfidentialTransfer();
+
+  if (!ctConfigured) {
+    return (
+      <NotDeployedCard
+        contractName="ConfidentialToken"
+        description="Deploy ConfidentialToken on Ethereum Sepolia to enable shield, confidential transfer, and unshield."
+      />
+    );
+  }
 
   const tabConfig = TAB_CONFIG.find((t) => t.id === tab)!;
 

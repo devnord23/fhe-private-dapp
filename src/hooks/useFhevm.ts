@@ -24,6 +24,7 @@ import {
   type FhevmInstance,
 } from "@/lib/fhevm";
 import { SUPPORTED_CHAIN_IDS, type SupportedChainId } from "@/lib/constants";
+import { isFhevmSystemConfigured } from "@/lib/contracts";
 
 type FhevmStatus = "idle" | "loading" | "ready" | "error" | "unsupported";
 
@@ -61,6 +62,17 @@ export function useFhevm(): UseFhevmResult {
     let cancelled = false;
 
     async function init() {
+      // Guard: if ACL/KMS addresses are not configured (zero), don't attempt WASM load.
+      // This prevents console errors in Demo Mode on Vercel.
+      if (!isFhevmSystemConfigured()) {
+        setStatus("unsupported");
+        setError(
+          "Zama fhEVM system contracts (ACL/KMS) are not configured. " +
+            "Set NEXT_PUBLIC_FHEVM_ACL_ADDRESS and NEXT_PUBLIC_FHEVM_KMS_ADDRESS in your env."
+        );
+        return;
+      }
+
       if (!isSupportedChain(chainId)) {
         setStatus("unsupported");
         setError(
