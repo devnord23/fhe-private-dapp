@@ -1,0 +1,16 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "EthereumZamaGatewayConfig",
+  "sourceName": "fhevm/config/ZamaGatewayConfig.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    }
+  ],
+  "bytecode": "0x6080604052348015600e575f80fd5b507f93ab6e17f2c461cce6ea5d4ec117e51dda77a64affc2b2c05f8cd440def0e70080546001600160a01b0319169055603e8060495f395ff3fe60806040525f80fdfea2646970667358221220d45f3b27f435cf71209680e0591afe326df1ef55f6e5d2806668033d4df8511264736f6c63430008180033",
+  "deployedBytecode": "0x60806040525f80fdfea2646970667358221220d45f3b27f435cf71209680e0591afe326df1ef55f6e5d2806668033d4df8511264736f6c63430008180033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

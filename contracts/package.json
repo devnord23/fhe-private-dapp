@@ -1,0 +1,35 @@
+{
+  "name": "fhe-private-dapp-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ConfidentialToken smart contracts using Zama fhEVM",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:gas": "REPORT_GAS=true hardhat test",
+    "deploy:local": "hardhat run scripts/deploy.ts --network hardhat",
+    "deploy:zamaDevnet": "hardhat run scripts/deploy.ts --network zamaDevnet",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
+    "deploy:agent:local": "hardhat run scripts/deployAgent.ts --network hardhat",
+    "deploy:agent:zamaDevnet": "hardhat run scripts/deployAgent.ts --network zamaDevnet",
+    "deploy:agent:sepolia": "hardhat run scripts/deployAgent.ts --network sepolia",
+    "deploy:vault:local": "hardhat run scripts/deployBaseVault.ts --network hardhat",
+    "deploy:vault:baseSepolia": "hardhat run scripts/deployBaseVault.ts --network baseSepolia",
+    "deploy:vault:base": "hardhat run scripts/deployBaseVault.ts --network base",
+    "verify": "hardhat verify --network sepolia",
+    "clean": "hardhat clean",
+    "interact:local": "hardhat run scripts/interact.ts --network hardhat"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "dotenv": "^16.4.5",
+    "fhevm": "^0.6.0",
+    "hardhat": "^2.22.17",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.1.0"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "SepoliaZamaGatewayConfig",
+  "sourceName": "fhevm/config/ZamaGatewayConfig.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    }
+  ],
+  "bytecode": "0x6080604052348015600e575f80fd5b507f93ab6e17f2c461cce6ea5d4ec117e51dda77a64affc2b2c05f8cd440def0e70080546001600160a01b0319167333347831500f1e73f0cccbb95c9f86b94d7b1123179055603e80605f5f395ff3fe60806040525f80fdfea26469706673582212204c51b8bcc423aba2ef6c62b907769b93facdb7fc095d3fdfa69bed9f71a4ca8064736f6c63430008180033",
+  "deployedBytecode": "0x60806040525f80fdfea26469706673582212204c51b8bcc423aba2ef6c62b907769b93facdb7fc095d3fdfa69bed9f71a4ca8064736f6c63430008180033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
