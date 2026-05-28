@@ -4,56 +4,49 @@ import { useState } from "react";
 import { useContractConfig } from "@/hooks/useContractConfig";
 import { cn } from "@/lib/utils";
 
-/**
- * DemoModeBanner — shown at the top of the app when no contracts are deployed.
- *
- * Dismissible per session. Reappears on page refresh until contracts are live.
- */
 export function DemoModeBanner() {
-  const { isDemoMode, vault, confidentialToken, strategyAgent } = useContractConfig();
+  const { isDemoMode } = useContractConfig();
   const [dismissed, setDismissed] = useState(false);
 
   if (!isDemoMode || dismissed) return null;
 
-  const configured = [
-    vault              && "BaseVault",
-    confidentialToken  && "ConfidentialToken",
-    strategyAgent      && "StrategyAgent",
-  ].filter(Boolean);
-
   return (
-    <div className="sticky top-16 z-30 w-full bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border-b border-yellow-500/20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-3 py-2.5">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="shrink-0 flex items-center gap-1.5 rounded-full bg-yellow-500/15 border border-yellow-500/25 px-2.5 py-0.5 text-[10px] font-bold text-yellow-400 uppercase tracking-wide">
-              <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse-slow" />
-              Demo UI Mode
-            </span>
-            <p className="text-xs text-yellow-300/80 truncate">
-              {configured.length === 0
-                ? "No contracts deployed. UI is fully functional — connect wallet, explore pages, read documentation."
-                : `Partial: ${configured.join(", ")} deployed. Other features show disabled state.`}
-            </p>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <a
-              href="https://github.com/devnord23/fhe-private-dapp/blob/cursor/confidential-transfer-dapp-7533/TESTNET_DEPLOYMENT.md"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden sm:inline text-[10px] text-yellow-400 hover:text-yellow-300 underline underline-offset-2 transition-colors"
-            >
-              Deploy guide ↗
-            </a>
-            <button
-              onClick={() => setDismissed(true)}
-              className="text-yellow-400/60 hover:text-yellow-400 transition-colors p-1 rounded"
-              aria-label="Dismiss"
-            >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+    <div className="sticky top-16 z-30 w-full">
+      {/* Glass banner */}
+      <div className="bg-[#0a0a12]/80 backdrop-blur-xl border-b border-white/[0.06]">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between gap-4 py-2.5">
+            <div className="flex items-center gap-3 min-w-0">
+              {/* Animated indicator */}
+              <div className="shrink-0 flex items-center gap-2 rounded-full bg-orange-500/10 border border-orange-500/20 px-3 py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
+                <span className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">
+                  Demo Mode
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 truncate">
+                No contracts deployed. Explore the UI — deploy contracts to activate all features.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <a
+                href="https://github.com/devnord23/fhe-private-dapp/blob/main/TESTNET_DEPLOYMENT.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden sm:inline text-[10px] text-base-400 hover:text-base-300 transition-colors font-medium"
+              >
+                Deploy guide →
+              </a>
+              <button
+                onClick={() => setDismissed(true)}
+                className="text-gray-600 hover:text-gray-400 transition-colors p-1 rounded"
+                aria-label="Dismiss"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -61,9 +54,7 @@ export function DemoModeBanner() {
   );
 }
 
-/**
- * NotDeployedCard — replaces a section when its contract isn't configured.
- */
+/** Premium "not deployed" card for undeployed contract sections */
 export function NotDeployedCard({
   contractName,
   description,
@@ -76,31 +67,35 @@ export function NotDeployedCard({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-yellow-500/15 bg-yellow-500/5 p-8 flex flex-col items-center justify-center gap-3 text-center",
+        "relative rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-lg",
+        "p-8 flex flex-col items-center justify-center gap-4 text-center overflow-hidden",
         className
       )}
+      style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" }}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-yellow-500/10">
-        <svg className="h-6 w-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+      {/* Subtle grid background */}
+      <div className="absolute inset-0 bg-grid opacity-50 pointer-events-none" />
+
+      <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-orange-500/8 border border-orange-500/15">
+        <svg className="h-5 w-5 text-orange-400/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
         </svg>
       </div>
-      <div>
-        <p className="text-sm font-semibold text-white">
-          {contractName} not deployed
+      <div className="relative">
+        <p className="text-sm font-semibold text-white/80 mb-1">
+          {contractName}
         </p>
-        <p className="text-xs text-gray-400 mt-1 max-w-xs">
-          {description ??
-            "Deploy this contract to a testnet to enable this feature. See TESTNET_DEPLOYMENT.md."}
+        <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
+          {description ?? "Deploy this contract to enable this feature."}
         </p>
       </div>
       <a
-        href="https://github.com/devnord23/fhe-private-dapp/blob/cursor/confidential-transfer-dapp-7533/TESTNET_DEPLOYMENT.md"
+        href="https://github.com/devnord23/fhe-private-dapp/blob/main/TESTNET_DEPLOYMENT.md"
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-yellow-400 hover:text-yellow-300 underline underline-offset-2"
+        className="relative text-[10px] text-orange-400/70 hover:text-orange-400 transition-colors font-mono uppercase tracking-wider"
       >
-        View deployment guide ↗
+        View deploy guide →
       </a>
     </div>
   );

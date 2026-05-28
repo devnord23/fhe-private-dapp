@@ -11,8 +11,8 @@ export default function TransferPage() {
     <div className="animate-fade-in space-y-6">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-3 mb-1 flex-wrap">
-          <h1 className="text-2xl font-bold text-white">Confidential Transfer</h1>
+        <div className="flex items-center gap-3 mb-2 flex-wrap">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Confidential Transfer</h1>
           <span className="px-2.5 py-0.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-xs text-brand-400 font-medium">
             ZK-Powered
           </span>

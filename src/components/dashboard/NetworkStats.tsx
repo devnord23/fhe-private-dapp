@@ -15,7 +15,7 @@ export function NetworkStats() {
   const networkName = NETWORK_NAMES[chainId] ?? "Testnet";
 
   return (
-    <div className="rounded-2xl border border-surface-400/50 bg-surface-700 p-6">
+    <div className="glass-card p-6">
       <div className="flex items-center justify-between mb-5">
         <h3 className="text-base font-semibold text-white">Protocol Stats</h3>
         <span className="text-xs px-2.5 py-1 rounded-full bg-surface-500 text-gray-400">

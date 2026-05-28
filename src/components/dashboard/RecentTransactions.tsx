@@ -91,7 +91,7 @@ export function RecentTransactions() {
 
   if (!isConnected) {
     return (
-      <div className="rounded-2xl border border-surface-400/50 bg-surface-700 p-6">
+      <div className="glass-card p-6">
         <h3 className="text-base font-semibold text-white mb-4">Recent Activity</h3>
         <div className="py-8 text-center text-gray-500 text-sm">
           Connect your wallet to view transactions
@@ -101,7 +101,7 @@ export function RecentTransactions() {
   }
 
   return (
-    <div className="rounded-2xl border border-surface-400/50 bg-surface-700 p-6">
+    <div className="glass-card p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-semibold text-white">Recent Activity</h3>
         <Link href="/history">
