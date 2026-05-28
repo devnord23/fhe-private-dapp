@@ -144,6 +144,23 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      {/* ── Quick action strip ───────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { href: "/vault",     icon: "↓", label: "Deposit",          sub: "Base Sepolia",   color: "border-base-500/20 hover:bg-base-500/5"   },
+          { href: "/transfer",  icon: "🔒", label: "Shield",           sub: "Zama fhEVM",     color: "border-brand-500/20 hover:bg-brand-500/5" },
+          { href: "/strategy",  icon: "⚙", label: "Create Strategy",  sub: "Encrypted params", color: "border-brand-500/15 hover:bg-brand-500/4" },
+          { href: "/vault",     icon: "↑", label: "Withdraw",         sub: "Base Sepolia",   color: "border-white/[0.07] hover:bg-white/[0.04]" },
+        ].map((a) => (
+          <Link key={a.label} href={a.href}
+            className={`rounded-xl border bg-white/[0.02] p-4 flex flex-col gap-1 transition-colors ${a.color}`}>
+            <span className="text-xl">{a.icon}</span>
+            <p className="text-xs font-semibold text-white">{a.label}</p>
+            <p className="text-[10px] text-gray-600">{a.sub}</p>
+          </Link>
+        ))}
+      </div>
+
       {/* ── Main content ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-1">

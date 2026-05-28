@@ -153,18 +153,10 @@ export default function HomePage() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white/80 mb-1">Demo Mode Active</p>
               <p className="text-xs text-gray-500 leading-relaxed">
-                No contracts are deployed yet. All pages render fully — forms show
-                &ldquo;not deployed&rdquo; states instead of sending transactions.
-                Follow the{" "}
-                <a
-                  href="https://github.com/devnord23/fhe-private-dapp/blob/main/TESTNET_DEPLOYMENT.md"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-orange-400 hover:text-orange-300 underline underline-offset-2"
-                >
-                  deployment guide
-                </a>{" "}
-                to activate all features.
+                No contracts deployed yet. All pages render fully — forms show
+                &ldquo;not configured&rdquo; states instead of sending transactions.
+                Set contract addresses in your Vercel environment variables to activate deposits and shield.
+                See <strong className="text-orange-400/80">TESTNET_DEPLOYMENT.md</strong> in the repo.
               </p>
             </div>
           </div>
